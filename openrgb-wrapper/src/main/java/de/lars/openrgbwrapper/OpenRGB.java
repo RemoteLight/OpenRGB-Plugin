@@ -10,6 +10,7 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 
 public class OpenRGB {
 
@@ -53,7 +54,7 @@ public class OpenRGB {
             // connect client socket
             connected = client.connect();
             // send client name
-            sendMessage(PacketIdentifier.SET_CLIENT_NAME, clientName.getBytes(StandardCharsets.US_ASCII), 0);
+            sendMessage(PacketIdentifier.SET_CLIENT_NAME, (clientName+'\0').getBytes(StandardCharsets.US_ASCII), 0);
         } catch (IOException e) {
             System.err.println("Could not connect to the server: ");
             e.printStackTrace();
@@ -131,7 +132,7 @@ public class OpenRGB {
 
             byte[] data = new byte[packet.dataLength];
             // read data
-            in.readFully(data);
+            if(in.read(data) == -1) return null;
             return data;
         } catch (IOException e) {
             System.err.println("Error while reading from the server:");
@@ -158,7 +159,7 @@ public class OpenRGB {
         if(header.length != HEADER_SIZE)
             throw new IllegalArgumentException("Wrong header length! Expected a header length of " + HEADER_SIZE + " but is " + header.length + ".");
 
-        ByteBuffer buffer = ByteBuffer.wrap(header);
+        ByteBuffer buffer = ByteBuffer.wrap(header).order(ByteOrder.LITTLE_ENDIAN);
         // read the magic header bytes
         String magic = new String(header, 0, 4, StandardCharsets.US_ASCII);
         if(!magic.equals("ORGB"))
