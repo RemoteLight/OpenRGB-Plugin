@@ -23,7 +23,7 @@ data class Mode(val name: String, val value: Int, val flags: Int, val speedMin: 
             val modes: Array<Mode> = Array(numModes) {
                 val namePair: Pair<String, Int> = readString(buf, offset)
                 val name = namePair.first
-                offset += namePair.second
+                offset = namePair.second
 
                 val value = buf.getInt(offset)
                 offset += 4
@@ -54,8 +54,9 @@ data class Mode(val name: String, val value: Int, val flags: Int, val speedMin: 
 
                 val colorCount: Int = buf.getShort(offset).toInt()
                 offset += 2
-                val colors = Color.decode(buf.array(), offset, colorCount)
-                offset += colorCount - 1
+                val colorsPair = Color.decode(buf.array(), offset, colorCount)
+                val colors = colorsPair.first
+                offset = colorsPair.second
 
                 Mode(name, value, flags, speedMin, speedMax, colorMin, colorMax, speed, direction, colorMode, colors)
             }

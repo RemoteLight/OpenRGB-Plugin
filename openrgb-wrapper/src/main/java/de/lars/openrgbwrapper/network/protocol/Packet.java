@@ -11,4 +11,13 @@ public class Packet {
         this.deviceId = deviceId;
         this.dataLength = dataLength;
     }
+
+    @Override
+    public String toString() {
+        return "Packet{" +
+                "identifier=" + identifier +
+                ", deviceId=" + deviceId +
+                ", dataLength=" + dataLength +
+                '}';
+    }
 }

@@ -21,7 +21,7 @@ data class Zone(val name: String, val zoneType: Int, val ledsMin: Int, val ledsM
             val zones: Array<Zone> = Array(zoneCount) {
                 val namePair: Pair<String, Int> = readString(buf, offset)
                 val name = namePair.first
-                offset += namePair.second
+                offset = namePair.second
 
                 val type = buf.getInt(offset)
                 offset += 4

@@ -21,7 +21,7 @@ data class Led(val name: String, val color: Color) {
             val leds: Array<Led> = Array(ledCount.toInt()) {
                 val namePair: Pair<String, Int> = readString(buf, offset)
                 val name = namePair.first
-                offset += namePair.second
+                offset = namePair.second
 
                 val color = Color.decode(buf.array().copyOfRange(offset, offset + 4))
                 offset += 4

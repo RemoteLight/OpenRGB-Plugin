@@ -1,5 +1,6 @@
 package test.de.lars.openrgbwrapper;
 
+import de.lars.openrgbwrapper.Device;
 import de.lars.openrgbwrapper.OpenRGB;
 
 import java.io.IOException;
@@ -11,6 +12,10 @@ public class LibTest {
         OpenRGB orgb = new OpenRGB("127.0.0.1", 6742);
         orgb.connect();
         System.out.println("Connected controllers: " + orgb.getControllerCount());
+
+        // get controller
+        Device device = orgb.getControllerData(0);
+        System.out.println("Controller data: " + device);
 
         // keep running
         Scanner scanner = new Scanner(System.in);

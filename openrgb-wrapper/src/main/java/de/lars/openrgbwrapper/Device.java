@@ -1,10 +1,15 @@
-package de.lars.openrgbwrapper.models;
+package de.lars.openrgbwrapper;
 
+import de.lars.openrgbwrapper.models.Color;
+import de.lars.openrgbwrapper.models.Led;
+import de.lars.openrgbwrapper.models.Mode;
+import de.lars.openrgbwrapper.models.Zone;
 import de.lars.openrgbwrapper.types.DeviceType;
 import de.lars.openrgbwrapper.utils.Pair;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.util.Arrays;
 
 import static de.lars.openrgbwrapper.utils.BufferUtil.readString;
 
@@ -49,23 +54,23 @@ public class Device {
 
         Pair<String, Integer> namePair = readString(buffer, offset);
         String name = namePair.first;
-        offset += namePair.second;
+        offset = namePair.second;
 
         Pair<String, Integer> descPair = readString(buffer, offset);
         String description = descPair.first;
-        offset += descPair.second;
+        offset = descPair.second;
 
         Pair<String, Integer> versionPair = readString(buffer, offset);
         String version = versionPair.first;
-        offset += versionPair.second;
+        offset = versionPair.second;
 
         Pair<String, Integer> serialPair = readString(buffer, offset);
         String serial = serialPair.first;
-        offset += serialPair.second;
+        offset = serialPair.second;
 
         Pair<String, Integer> locPair = readString(buffer, offset);
         String location = locPair.first;
-        offset += locPair.second;
+        offset = locPair.second;
 
         short modeCount = buffer.getShort(offset);
         offset += 2;
@@ -97,4 +102,20 @@ public class Device {
                 location, activeMode, modes, zones, leds, colors);
     }
 
+    @Override
+    public String toString() {
+        return "Device{" +
+                "type=" + type +
+                ", name='" + name + '\'' +
+                ", description='" + description + '\'' +
+                ", version='" + version + '\'' +
+                ", serial='" + serial + '\'' +
+                ", location='" + location + '\'' +
+                ", activeMode=" + activeMode +
+                ", modes=" + Arrays.toString(modes) +
+                ", zones=" + Arrays.toString(zones) +
+                ", leds=" + Arrays.toString(leds) +
+                ", colors=" + Arrays.toString(colors) +
+                '}';
+    }
 }

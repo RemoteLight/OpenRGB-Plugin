@@ -1,6 +1,5 @@
 package de.lars.openrgbwrapper;
 
-import de.lars.openrgbwrapper.models.Device;
 import de.lars.openrgbwrapper.network.Client;
 import de.lars.openrgbwrapper.network.protocol.Packet;
 import de.lars.openrgbwrapper.network.protocol.PacketIdentifier;
@@ -79,12 +78,15 @@ public class OpenRGB {
      */
     public int getControllerCount() {
         sendMessage(PacketIdentifier.REQUEST_CONTROLLER_COUNT, 0);
-        return ByteBuffer.wrap(readMessage()).getInt();
+        byte[] data = readMessage();
+        return data != null ? ByteBuffer.wrap(data).order(ByteOrder.LITTLE_ENDIAN).getInt() : 0;
     }
 
     public Device getControllerData(int deviceId) {
         sendMessage(PacketIdentifier.REQUEST_CONTROLLER_DATA, deviceId);
-        return Device.decode(readMessage());
+        byte[] data = readMessage();
+        System.out.println("Raw data: " + Arrays.toString(data));
+        return data != null ? Device.decode(data) : null;
     }
 
     /**
@@ -130,7 +132,7 @@ public class OpenRGB {
         try {
             byte[] header = new byte[HEADER_SIZE];
             // read header
-            in.readFully(header);
+            if(in.read(header) == -1) return null;
             // decode header
             Packet packet = decodeHeader(header);
             // check if data length is 0
