@@ -1,6 +1,12 @@
 package de.lars.openrgbwrapper.models;
 
 import de.lars.openrgbwrapper.types.DeviceType;
+import de.lars.openrgbwrapper.utils.Pair;
+
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
+
+import static de.lars.openrgbwrapper.utils.BufferUtil.readString;
 
 public class Device {
 
@@ -31,8 +37,64 @@ public class Device {
     }
 
     public static Device decode(byte[] data) {
-        // TODO
-        return null;
+        ByteBuffer buffer = ByteBuffer.wrap(data).order(ByteOrder.LITTLE_ENDIAN);
+        int offset = 4;
+
+        int typeIndex = buffer.getInt(offset);
+        offset += 4;
+        DeviceType[] deviceTypes = DeviceType.values();
+        DeviceType type = DeviceType.Unknown;
+        if(typeIndex < deviceTypes.length)
+            type = deviceTypes[typeIndex];
+
+        Pair<String, Integer> namePair = readString(buffer, offset);
+        String name = namePair.first;
+        offset += namePair.second;
+
+        Pair<String, Integer> descPair = readString(buffer, offset);
+        String description = descPair.first;
+        offset += descPair.second;
+
+        Pair<String, Integer> versionPair = readString(buffer, offset);
+        String version = versionPair.first;
+        offset += versionPair.second;
+
+        Pair<String, Integer> serialPair = readString(buffer, offset);
+        String serial = serialPair.first;
+        offset += serialPair.second;
+
+        Pair<String, Integer> locPair = readString(buffer, offset);
+        String location = locPair.first;
+        offset += locPair.second;
+
+        short modeCount = buffer.getShort(offset);
+        offset += 2;
+        int activeMode = buffer.getInt(offset);
+        offset += 4;
+        Pair<Mode[], Integer> modesPair = Mode.Companion.decode(buffer.array(), offset, modeCount);
+        Mode[] modes = modesPair.first;
+        offset = modesPair.second; // in this case offset of Mode.decode is absolute
+
+        short zoneCount = buffer.getShort(offset);
+        offset += 2;
+        Pair<Zone[], Integer> zonesPair = Zone.Companion.decode(buffer.array(), offset, zoneCount);
+        Zone[] zones = zonesPair.first;
+        offset = zonesPair.second; // returns absolute buffer offset
+
+        short ledCount = buffer.getShort(offset);
+        offset += 2;
+        Pair<Led[], Integer> ledsPair = Led.Companion.decode(buffer.array(), offset, ledCount);
+        Led[] leds = ledsPair.first;
+        offset = ledsPair.second;
+
+        short colorCount = buffer.getShort(offset);
+        offset += 2;
+        Pair<Color[], Integer> colorsPair = Color.Companion.decode(buffer.array(), offset, colorCount);
+        Color[] colors = colorsPair.first;
+        offset = colorsPair.second;
+
+        return new Device(type, name, description, version, serial,
+                location, activeMode, modes, zones, leds, colors);
     }
 
 }

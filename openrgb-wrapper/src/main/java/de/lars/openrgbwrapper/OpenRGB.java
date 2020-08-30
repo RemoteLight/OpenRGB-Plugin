@@ -1,5 +1,6 @@
 package de.lars.openrgbwrapper;
 
+import de.lars.openrgbwrapper.models.Device;
 import de.lars.openrgbwrapper.network.Client;
 import de.lars.openrgbwrapper.network.protocol.Packet;
 import de.lars.openrgbwrapper.network.protocol.PacketIdentifier;
@@ -79,6 +80,11 @@ public class OpenRGB {
     public int getControllerCount() {
         sendMessage(PacketIdentifier.REQUEST_CONTROLLER_COUNT, 0);
         return ByteBuffer.wrap(readMessage()).getInt();
+    }
+
+    public Device getControllerData(int deviceId) {
+        sendMessage(PacketIdentifier.REQUEST_CONTROLLER_DATA, deviceId);
+        return Device.decode(readMessage());
     }
 
     /**
