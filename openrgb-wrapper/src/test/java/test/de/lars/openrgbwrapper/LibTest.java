@@ -4,6 +4,7 @@ import de.lars.openrgbwrapper.Device;
 import de.lars.openrgbwrapper.OpenRGB;
 
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.Scanner;
 
 public class LibTest {
@@ -16,6 +17,10 @@ public class LibTest {
         // get controller
         Device device = orgb.getControllerData(0);
         System.out.println("Controller data: " + device);
+
+        System.out.print("All controllers: ");
+        Arrays.stream(orgb.getAllControllerData()).forEach(d -> System.out.print(d.name + ", "));
+        System.out.println();
 
         // keep running
         Scanner scanner = new Scanner(System.in);

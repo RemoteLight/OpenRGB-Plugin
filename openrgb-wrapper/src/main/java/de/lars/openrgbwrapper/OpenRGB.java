@@ -11,6 +11,8 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
+import java.util.stream.IntStream;
+import java.util.stream.Stream;
 
 public class OpenRGB {
 
@@ -82,11 +84,27 @@ public class OpenRGB {
         return data != null ? ByteBuffer.wrap(data).order(ByteOrder.LITTLE_ENDIAN).getInt() : 0;
     }
 
+    /**
+     * Request the controller data for a given device id
+     * @param deviceId      device id (starting at 0)
+     * @return              the controller data / device
+     */
     public Device getControllerData(int deviceId) {
         sendMessage(PacketIdentifier.REQUEST_CONTROLLER_DATA, deviceId);
         byte[] data = readMessage();
-        System.out.println("Raw data: " + Arrays.toString(data));
         return data != null ? Device.decode(data) : null;
+    }
+
+    /**
+     * Get the controller data for all controllers (0 to {@link #getControllerCount()})
+     * @return              array with all controller data / devices
+     */
+    public Device[] getAllControllerData() {
+        int n = getControllerCount();
+        Device[] devices = new Device[n];
+        for(int i = 0; i < n; i++)
+            devices[i] = getControllerData(i);
+        return devices;
     }
 
     /**
