@@ -2,6 +2,7 @@ package test.de.lars.openrgbwrapper;
 
 import de.lars.openrgbwrapper.Device;
 import de.lars.openrgbwrapper.OpenRGB;
+import de.lars.openrgbwrapper.models.Color;
 
 import java.io.IOException;
 import java.util.Arrays;
@@ -15,12 +16,19 @@ public class LibTest {
         System.out.println("Connected controllers: " + orgb.getControllerCount());
 
         // get controller
-        Device device = orgb.getControllerData(0);
+        final int deviceId = 0;
+        Device device = orgb.getControllerData(deviceId);
         System.out.println("Controller data: " + device);
 
         System.out.print("All controllers: ");
         Arrays.stream(orgb.getAllControllerData()).forEach(d -> System.out.print(d.name + ", "));
         System.out.println();
+
+        // update leds
+        for(int i = 0; i < device.colors.length; i++) {
+            device.colors[i] = new Color(0, 255, 0);
+        }
+        orgb.updateLeds(deviceId, device.colors);
 
         // keep running
         Scanner scanner = new Scanner(System.in);

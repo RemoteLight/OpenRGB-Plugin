@@ -1,5 +1,6 @@
 package de.lars.openrgbwrapper;
 
+import de.lars.openrgbwrapper.models.Color;
 import de.lars.openrgbwrapper.network.Client;
 import de.lars.openrgbwrapper.network.protocol.Packet;
 import de.lars.openrgbwrapper.network.protocol.PacketIdentifier;
@@ -105,6 +106,62 @@ public class OpenRGB {
         for(int i = 0; i < n; i++)
             devices[i] = getControllerData(i);
         return devices;
+    }
+
+    /**
+     * Update the color for each led for the specified device id
+     * @param deviceId          target device
+     * @param colors            colors for the leds (length must match the led count)
+     */
+    public void updateLeds(int deviceId, Color[] colors) {
+        if(colors == null)
+            throw new IllegalArgumentException("Colors cannot be null!");
+        if(colors.length >= Short.MAX_VALUE)
+            throw new IllegalArgumentException("The length of the color array exceeds the maximum byte capacity (16-bit).");
+
+        int size = 4 + 2 + (4 * colors.length);
+        ByteBuffer buffer = ByteBuffer.allocate(size).order(ByteOrder.LITTLE_ENDIAN);
+        buffer.putInt(size);                    // 4 bytes for buffer length
+        buffer.putShort((short) colors.length); // 2 bytes for color count
+
+        for (Color color : colors) {            // 4 bytes for each color
+            buffer.put(color.encode());
+        }
+
+        sendMessage(PacketIdentifier.RGBCONTROLLER_UPDATELEDS, buffer.array(), deviceId);
+    }
+
+    /**
+     * Update the colors for the specified zone and device.
+     * @param deviceId          target device
+     * @param zoneId            target zone
+     * @param colors            colors for the leds (length must match the led count of the zone)
+     */
+    public void updateZone(int deviceId, int zoneId, Color[] colors) {
+        if(colors == null)
+            throw new IllegalArgumentException("Colors cannot be null!");
+        if(colors.length >= Short.MAX_VALUE)
+            throw new IllegalArgumentException("The length of the color array exceeds the maximum byte capacity (16-bit).");
+
+        int size = 4 + 4 + 2 + (4 * colors.length);
+        ByteBuffer buffer = ByteBuffer.allocate(size).order(ByteOrder.LITTLE_ENDIAN);
+        buffer.putInt(size);                    // 4 bytes for buffer length
+        buffer.putInt(zoneId);                  // 4 bytes for zone id
+        buffer.putShort((short) colors.length); // 2 bytes for color count
+
+        for (Color color : colors) {            // 4 bytes for each color
+            buffer.put(color.encode());
+        }
+
+        sendMessage(PacketIdentifier.RGBCONTROLLER_UPDATEZONELEDS, buffer.array(), deviceId);
+    }
+
+    /**
+     * Sets the mode of the specified to custom
+     * @param deviceId              target device
+     */
+    public void setCustomMode(int deviceId) {
+        sendMessage(PacketIdentifier.RGBCONTROLLER_SETCUSTOMMODE, deviceId);
     }
 
     /**

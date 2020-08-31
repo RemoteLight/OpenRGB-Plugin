@@ -14,6 +14,7 @@ data class Led(val name: String, val color: Color) {
          * Decode an array of leds from a byte buffer
          * @return a Pair with the led array and the absolute buffer offset
          */
+        @ExperimentalUnsignedTypes
         fun decode(buffer: ByteArray, bufOffset: Int, ledCount: Short): Pair<Array<Led>, Int> {
             val buf: ByteBuffer = ByteBuffer.wrap(buffer).order(ByteOrder.LITTLE_ENDIAN)
             var offset: Int = bufOffset
