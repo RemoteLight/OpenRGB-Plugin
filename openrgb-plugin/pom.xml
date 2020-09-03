@@ -19,7 +19,12 @@
         <dependency>
             <groupId>com.github.Drumber</groupId>
             <artifactId>RemoteLight</artifactId>
-            <version>d4c54b28ae</version>
+            <version>900295c11c</version>
+        </dependency>
+        <dependency>
+            <groupId>de.lars</groupId>
+            <artifactId>openrgb-wrapper</artifactId>
+            <version>${project.version}</version>
         </dependency>
     </dependencies>
 
