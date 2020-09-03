@@ -149,6 +149,8 @@ public class OutputHandler implements VirtualOutputListener, PixelStreamReceiver
     }
 
     public void setVirtualOutput(VirtualOutput virtualOutput) {
+        if(this.virtualOutput == virtualOutput)
+            return;
         detachFromOutput();
         this.virtualOutput = virtualOutput;
         updateOutputPixel();
@@ -160,6 +162,8 @@ public class OutputHandler implements VirtualOutputListener, PixelStreamReceiver
     }
 
     public void setDeviceId(int deviceId) {
+        if(this.deviceId == deviceId)
+            return;
         this.deviceId = deviceId;
         updateOpenRgbDevice();
         updateOutputPixel();

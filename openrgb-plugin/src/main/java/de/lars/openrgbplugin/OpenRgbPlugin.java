@@ -3,14 +3,13 @@ package de.lars.openrgbplugin;
 import de.lars.openrgbplugin.utils.StorageUtil;
 import de.lars.openrgbplugin.utils.ValueHolder;
 import de.lars.openrgbwrapper.OpenRGB;
+import de.lars.remotelightclient.ui.panels.tools.ToolsPanel;
 import de.lars.remotelightcore.devices.DeviceManager;
 import de.lars.remotelightcore.devices.virtual.VirtualOutput;
 import de.lars.remotelightcore.out.Output;
 import de.lars.remotelightcore.settings.SettingsManager;
-import de.lars.remotelightcore.settings.types.SettingString;
 import de.lars.remotelightplugins.Plugin;
 
-import java.io.IOException;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -34,6 +33,11 @@ public class OpenRgbPlugin extends Plugin {
         setHandler = new HashSet<>();
         // load settings
         loadSettings();
+
+        // create entry panel
+        OpenRgbEntryPanel entry = new OpenRgbEntryPanel();
+        // register entry
+        ToolsPanel.getEntryList().add(entry);
 
        print("Enabled OpenRGB Plugin.");
     }
@@ -66,13 +70,7 @@ public class OpenRgbPlugin extends Plugin {
                 continue;
             }
 
-            // create OpenRGB client
-            OpenRGB orgb = new OpenRGB(holder.getOrgbIp(), holder.getOrgbPort(), holder.getName());
-            // create output handler
-            OutputHandler handler = new OutputHandler(output, orgb, holder.getDeviceId());
-            handler.setName(holder.getName());
-            // attach handler to output
-            handler.attachToOutput();
+            OutputHandler handler = createHandler(holder, output);
             // add to handler set
             setHandler.add(handler);
         }
@@ -102,6 +100,39 @@ public class OpenRgbPlugin extends Plugin {
     }
 
     /**
+     * Get all registered output handlers
+     * @return      a set of all output handlers
+     */
+    public Set<OutputHandler> getHandlerSet() {
+        return setHandler;
+    }
+
+    /**
+     * Add new output handler to the set
+     * @param handler   the handler to add
+     */
+    public void addHandler(OutputHandler handler) {
+        setHandler.add(handler);
+    }
+
+    /**
+     * Create a new output handler instance
+     * @param holder    values holder
+     * @param output    virtual output
+     * @return          output handler created using the specified values
+     */
+    public OutputHandler createHandler(ValueHolder holder, VirtualOutput output) {
+        // create OpenRGB client
+        OpenRGB orgb = new OpenRGB(holder.getOrgbIp(), holder.getOrgbPort(), holder.getName());
+        // create output handler
+        OutputHandler handler = new OutputHandler(output, orgb, holder.getDeviceId());
+        handler.setName(holder.getName());
+        // attach handler to output
+        handler.attachToOutput();
+        return handler;
+    }
+
+    /**
      * Find virtual output by the specified id
      * @param id    id of the virtual output
      * @return      the virtual output or null
@@ -113,6 +144,18 @@ public class OpenRgbPlugin extends Plugin {
             return (VirtualOutput) o;
         }
         return null;
+    }
+
+    /**
+     * Compare ip address and port
+     * @param ip1   ip #1
+     * @param port1 port #1
+     * @param ip2   ip #2
+     * @param port2 port #2
+     * @return      true if the address and port is equal
+     */
+    public static boolean compareConnectionInfo(String ip1, int port1, String ip2, int port2) {
+        return ip1.equalsIgnoreCase(ip2) && port1 == port2;
     }
 
     public static void print(String text) {
