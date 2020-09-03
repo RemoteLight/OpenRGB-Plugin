@@ -26,7 +26,10 @@ public class LibTest {
 
         // update leds
         for(int i = 0; i < device.colors.length; i++) {
-            device.colors[i] = new Color(0, 255, 0);
+            if(i % 2 == 0)
+                device.colors[i] = new Color(0, 255, 0);
+            else
+                device.colors[i] = new Color(0, 0, 255);
         }
         orgb.updateLeds(deviceId, device.colors);
 

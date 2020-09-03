@@ -43,7 +43,6 @@ data class Color constructor(var red: Int, var green: Int, var blue: Int) {
         @ExperimentalUnsignedTypes
         fun decode(data: ByteArray): Color {
             require(data.size > 3) {"Could not decode color from byte array. Expected minimum length of 3 but is ${data.size}."}
-            println("Raw data: ${data[0]} ${data[1]} ${data[2]} Converted: ${data[0].toUByte().toInt()} ${data[1].toUByte().toInt()} ${data[2].toUByte().toInt()}")
             return Color(data[0].toUByte().toInt(), data[1].toUByte().toInt(), data[2].toUByte().toInt())
         }
     }
