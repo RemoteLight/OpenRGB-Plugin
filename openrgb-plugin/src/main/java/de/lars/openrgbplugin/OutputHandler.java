@@ -6,6 +6,8 @@ import de.lars.openrgbwrapper.models.Color;
 import de.lars.remotelightcore.devices.virtual.PixelStreamReceiver;
 import de.lars.remotelightcore.devices.virtual.VirtualOutput;
 import de.lars.remotelightcore.devices.virtual.VirtualOutputListener;
+import de.lars.remotelightcore.notification.Notification;
+import de.lars.remotelightcore.notification.NotificationType;
 
 import java.io.IOException;
 import java.util.Arrays;
@@ -17,6 +19,8 @@ public class OutputHandler implements VirtualOutputListener, PixelStreamReceiver
     private VirtualOutput virtualOutput;
     private int deviceId;
     private Device cachedDevice;
+    /** enable or disable pixel output */
+    private boolean enabled = false;
 
     /**
      * Create a new OutputHandler that forwards received data from a virtual output to
@@ -48,10 +52,19 @@ public class OutputHandler implements VirtualOutputListener, PixelStreamReceiver
     }
 
     /**
-     * Updates local cached OpenRGB device/controller data
+     * Check whether the device id is valid or not
+     * @return      true if device id is valid
+     */
+    public boolean checkDeviceId() {
+        return this.deviceId >= 0 && this.deviceId < openRGB.getControllerCount();
+    }
+
+    /**
+     * Updates local cached OpenRGB device/controller data (only if client is connected)
      */
     public void updateOpenRgbDevice() {
-        cachedDevice = openRGB.getControllerData(deviceId);
+        if(openRGB.getClient().isConnected())
+            cachedDevice = openRGB.getControllerData(deviceId);
     }
 
     /**
@@ -96,9 +109,13 @@ public class OutputHandler implements VirtualOutputListener, PixelStreamReceiver
 
     @Override
     public void receivedPixelData(java.awt.Color[] colors) {
+        if(!enabled) return;
         if(getOpenRgbDevice() != null && getOpenRgbDevice().leds.length != colors.length) {
             // virtual output pixel is not equal to OpenRGB led count
+            // update cached controller data
             updateOpenRgbDevice();
+            // update virtual output pixel number
+            updateOutputPixel();
             return; // skip this received data
         }
         // send to OpenRGB
@@ -122,6 +139,16 @@ public class OutputHandler implements VirtualOutputListener, PixelStreamReceiver
                 openRGB.getClient().getConnectionOptions().getPort()));
         // connect orgb client
         openRGB.connect();
+        // check for valid device id
+        if(!checkDeviceId()) {
+            OpenRgbPlugin.getInstance().getInterface().getNotificationManager().addNotification(
+                    new Notification(NotificationType.ERROR, "OpenRGB Plugin (" + name + ")",
+                            "Invalid ip-address, port or device id. Please check OpenRGB plugin configuration and re-activate the output."));
+            // disable pixel output
+            enabled = false;
+            return;
+        }
+        enabled = true;
         updateOutputPixel();
     }
 
@@ -137,6 +164,8 @@ public class OutputHandler implements VirtualOutputListener, PixelStreamReceiver
         } catch (IOException e) {
             OpenRgbPlugin.print("Error while disconnecting OpenRGB client.");
             e.printStackTrace();
+        } finally {
+            enabled = false;
         }
     }
 

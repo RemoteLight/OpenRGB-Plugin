@@ -106,7 +106,8 @@ public class SetupPanel extends JPanel implements ToolsNavListener {
         JButton btnAdd = new JButton(handler == null ? "Add OpenRGB Device" : "Save OpenRGB Device");
         UiUtils.configureButton(btnAdd);
         btnAdd.setAlignmentX(Component.LEFT_ALIGNMENT);
-        btnAdd.setMaximumSize(new Dimension(Integer.MAX_VALUE, 40));
+        btnAdd.setMaximumSize(new Dimension(Integer.MAX_VALUE, 50));
+        btnAdd.setMinimumSize(new Dimension(100, 50));
 
         btnAdd.addActionListener(e -> {
             // create value holder
@@ -176,7 +177,7 @@ public class SetupPanel extends JPanel implements ToolsNavListener {
         NumberFormatter formatter = new NumberFormatter(format);
         formatter.setValueClass(Integer.class);
         formatter.setMinimum(0);
-        formatter.setAllowsInvalid(false);
+        formatter.setAllowsInvalid(true);
         formatter.setCommitsOnValidEdit(true);
         return formatter;
     }

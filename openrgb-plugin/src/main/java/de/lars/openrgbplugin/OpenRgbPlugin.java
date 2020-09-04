@@ -124,6 +124,8 @@ public class OpenRgbPlugin extends Plugin {
     public OutputHandler createHandler(ValueHolder holder, VirtualOutput output) {
         // create OpenRGB client
         OpenRGB orgb = new OpenRGB(holder.getOrgbIp(), holder.getOrgbPort(), holder.getName());
+        // change default timeout to 3s
+        orgb.getClient().setConnectionTimeout(3000);
         // create output handler
         OutputHandler handler = new OutputHandler(output, orgb, holder.getDeviceId());
         handler.setName(holder.getName());
