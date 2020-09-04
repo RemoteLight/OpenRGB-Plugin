@@ -11,9 +11,6 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.charset.StandardCharsets;
-import java.util.Arrays;
-import java.util.stream.IntStream;
-import java.util.stream.Stream;
 
 public class OpenRGB {
 
@@ -23,6 +20,8 @@ public class OpenRGB {
     private final String clientName;
     /** client used to communicate with the OpenRGB server */
     private final Client client;
+    /** should connect, disconnect methods throw or catch exceptions */
+    private boolean catchExceptionMode = false;
 
     /**
      * Create a new OpenRGB instance to communicate with the OpenRGB server
@@ -47,11 +46,28 @@ public class OpenRGB {
     }
 
     /**
+     * Set whether connect, disconnect methods should catch or throw exceptions.
+     * @param catchExceptions       set to true if no exceptions should be thrown,
+     *                              set to false if you want to handle exceptions yourself
+     */
+    public void setCatchExceptionMode(boolean catchExceptions) {
+        this.catchExceptionMode = catchExceptions;
+    }
+
+    /**
+     * Get whether exceptions are caught and handled by the client or thrown.
+     * @return      true if exceptions are caught, false if exceptions are thrown
+     */
+    public boolean isCatchExceptionMode() {
+        return catchExceptionMode;
+    }
+
+    /**
      * Attempt to connect to the OpenRGB server
      * @return          true if the socket could connect,
      *                  false otherwise
      */
-    public boolean connect() {
+    public boolean connect() throws IOException {
         boolean connected = false;
         try {
             // connect client socket
@@ -59,10 +75,40 @@ public class OpenRGB {
             // send client name
             sendMessage(PacketIdentifier.SET_CLIENT_NAME, (clientName+'\0').getBytes(StandardCharsets.US_ASCII), 0);
         } catch (IOException e) {
+            if(!isCatchExceptionMode())
+                throw e;
             System.err.println("Could not connect to the server: ");
             e.printStackTrace();
         }
         return connected;
+    }
+
+    /**
+     * Wrapper method of {@link Client#disconnect()}
+     * @return              true if the client was connected and could be closed,
+     *                      false otherwise
+     * @throws IOException  if an error occurs while closing the socket
+     */
+    public boolean disconnect() throws IOException {
+        boolean disconnected = false;
+        try {
+            disconnected = client.disconnect();
+        } catch (IOException e) {
+            if(!isCatchExceptionMode())
+                throw e;
+            System.err.println("Error while disconnecting client: ");
+            e.printStackTrace();
+        }
+        return disconnected;
+    }
+
+    /**
+     * Wrapper method of {@link Client#isConnected()}
+     * @return              true if socket is connected,
+     *                      false otherwise
+     */
+    public boolean isConnected() {
+        return client.isConnected();
     }
 
     /**
@@ -184,6 +230,13 @@ public class OpenRGB {
         } catch (IOException e) {
             System.err.println("Error while sending packet to the server:");
             e.printStackTrace();
+            System.out.println("Disconnecting client due to exception.");
+            try {
+                disconnect();
+            } catch (IOException ioException) {
+                System.err.println("Error while disconnecting: ");
+                ioException.printStackTrace();
+            }
         }
     }
 

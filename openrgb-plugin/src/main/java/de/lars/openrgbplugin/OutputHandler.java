@@ -109,7 +109,16 @@ public class OutputHandler implements VirtualOutputListener, PixelStreamReceiver
 
     @Override
     public void receivedPixelData(java.awt.Color[] colors) {
+        // check if output is enabled
         if(!enabled) return;
+        // check if client is still connected
+        if(!openRGB.isConnected()) {
+            OpenRgbPlugin.getInstance().getInterface().getNotificationManager().addNotification(
+                new Notification(NotificationType.ERROR, "OpenRGB Plugin (" + name + ")", "Lost connection to OpenRGB SDK server."));
+            enabled = false;
+            return;
+        }
+        // check if pixel array length is valid
         if(getOpenRgbDevice() != null && getOpenRgbDevice().leds.length != colors.length) {
             // virtual output pixel is not equal to OpenRGB led count
             // update cached controller data
@@ -138,12 +147,24 @@ public class OutputHandler implements VirtualOutputListener, PixelStreamReceiver
                 openRGB.getClient().getConnectionOptions().getHostString(),
                 openRGB.getClient().getConnectionOptions().getPort()));
         // connect orgb client
-        openRGB.connect();
+        try {
+            openRGB.connect();
+        } catch (IOException e) {
+            String ip = openRGB.getClient().getConnectionOptions().getHostString();
+            int port = openRGB.getClient().getConnectionOptions().getPort();
+            OpenRgbPlugin.print(String.format("Error while connecting to OpenRGB server %s:%d. Error: %S", ip, port, e.getMessage()));
+            OpenRgbPlugin.getInstance().getInterface().getNotificationManager().addNotification(
+                    new Notification(NotificationType.ERROR, "OpenRGB Plugin (" + name + ")",
+                            String.format("Could not connect to %s:%d. Please check OpenRGB plugin configuration and re-activate the output.", ip, port)));
+            // disable pixel output
+            enabled = false;
+            return;
+        }
         // check for valid device id
         if(!checkDeviceId()) {
             OpenRgbPlugin.getInstance().getInterface().getNotificationManager().addNotification(
                     new Notification(NotificationType.ERROR, "OpenRGB Plugin (" + name + ")",
-                            "Invalid ip-address, port or device id. Please check OpenRGB plugin configuration and re-activate the output."));
+                            "Invalid device id. Please check OpenRGB plugin configuration and re-activate the output."));
             // disable pixel output
             enabled = false;
             return;
@@ -160,10 +181,9 @@ public class OutputHandler implements VirtualOutputListener, PixelStreamReceiver
                 openRGB.getClient().getConnectionOptions().getPort()));
         // disconnect orgb client
         try {
-            openRGB.getClient().disconnect();
+            openRGB.disconnect();
         } catch (IOException e) {
-            OpenRgbPlugin.print("Error while disconnecting OpenRGB client.");
-            e.printStackTrace();
+            OpenRgbPlugin.print("Error while disconnecting OpenRGB client: " + e.getMessage());
         } finally {
             enabled = false;
         }
