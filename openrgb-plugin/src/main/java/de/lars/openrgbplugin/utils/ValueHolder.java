@@ -9,9 +9,11 @@ public class ValueHolder {
     private int deviceId;
 
     public ValueHolder(String name, String outputId, String orgbIp, int orgbPort, int deviceId) {
+        this.name = name;
         this.outputId = outputId;
         this.orgbIp = orgbIp;
         this.orgbPort = orgbPort;
+        this.deviceId = deviceId;
     }
 
     public String getName() {

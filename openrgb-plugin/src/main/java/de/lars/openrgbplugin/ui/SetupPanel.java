@@ -13,6 +13,7 @@ import de.lars.remotelightcore.notification.Notification;
 import de.lars.remotelightcore.notification.NotificationType;
 
 import javax.swing.*;
+import javax.swing.text.NumberFormatter;
 import java.awt.*;
 import java.text.NumberFormat;
 
@@ -78,27 +79,34 @@ public class SetupPanel extends JPanel implements ToolsNavListener {
         lblServerPort.setForeground(Style.textColor);
 
         JTextField fieldServerIp = new JTextField(20);
-        JFormattedTextField fieldServerPort = new JFormattedTextField(NumberFormat.getIntegerInstance());
+        JFormattedTextField fieldServerPort = new JFormattedTextField(getIntFieldFormatter());
         fieldServerPort.setColumns(5);
         panelSettings.add(createSettingBgr(lblServerIp, fieldServerIp, lblServerPort, fieldServerPort));
 
         JLabel lblDeviceId = new JLabel("OpenRGB Device ID:");
         lblDeviceId.setForeground(Style.textColor);
 
-        JFormattedTextField fieldDeviceId = new JFormattedTextField(NumberFormat.getIntegerInstance());
+        JFormattedTextField fieldDeviceId = new JFormattedTextField(getIntFieldFormatter());
         fieldDeviceId.setColumns(10);
+        panelSettings.add(createSettingBgr(lblDeviceId, fieldDeviceId));
 
         if(handler != null) {
-            // set values
+            // set stored values
             fieldName.setText(handler.getName());
             fieldServerIp.setText(handler.getOpenRGB().getClient().getConnectionOptions().getHostString());
             fieldServerPort.setValue(handler.getOpenRGB().getClient().getConnectionOptions().getPort());
             fieldDeviceId.setValue(handler.getDeviceId());
+        } else {
+            // set default values
+            fieldServerIp.setText("127.0.0.1");
+            fieldServerPort.setValue(6742);
+            fieldDeviceId.setValue(0);
         }
 
         JButton btnAdd = new JButton(handler == null ? "Add OpenRGB Device" : "Save OpenRGB Device");
         UiUtils.configureButton(btnAdd);
-        btnAdd.setMaximumSize(new Dimension(Integer.MAX_VALUE, 30));
+        btnAdd.setAlignmentX(Component.LEFT_ALIGNMENT);
+        btnAdd.setMaximumSize(new Dimension(Integer.MAX_VALUE, 40));
 
         btnAdd.addActionListener(e -> {
             // create value holder
@@ -109,7 +117,7 @@ public class SetupPanel extends JPanel implements ToolsNavListener {
                     (int) fieldServerPort.getValue(),
                     (int) fieldDeviceId.getValue());
 
-            if(validateInput(holder.getName(), holder.getOrgbIp(), holder.getOrgbPort(), handler.getDeviceId())) {
+            if(validateInput(holder.getName(), holder.getOutputId(), holder.getOrgbIp(), holder.getOrgbPort(), holder.getDeviceId())) {
                 // get output
                 VirtualOutput output = OpenRgbPlugin.getVirtualOutput(instance.getInterface().getDeviceManager(), holder.getOutputId());
                 if (output == null) {
@@ -150,6 +158,8 @@ public class SetupPanel extends JPanel implements ToolsNavListener {
 
     private JPanel createSettingBgr(JComponent... components) {
         JPanel panel = new JPanel();
+        panel.setLayout(new FlowLayout(FlowLayout.LEFT));
+        panel.setAlignmentX(Component.LEFT_ALIGNMENT);
         panel.setBackground(Style.panelBackground);
         panel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 50));
         for(JComponent comp : components) {
@@ -159,15 +169,31 @@ public class SetupPanel extends JPanel implements ToolsNavListener {
         return panel;
     }
 
-    public boolean validateInput(String name, String ip, int port, int deviceId) {
+    private NumberFormatter getIntFieldFormatter() {
+        NumberFormat format = NumberFormat.getInstance();
+        format.setGroupingUsed(false);
+        format.setParseIntegerOnly(true);
+        NumberFormatter formatter = new NumberFormatter(format);
+        formatter.setValueClass(Integer.class);
+        formatter.setMinimum(0);
+        formatter.setAllowsInvalid(false);
+        formatter.setCommitsOnValidEdit(true);
+        return formatter;
+    }
+
+    public boolean validateInput(String name, String outputId, String ip, int port, int deviceId) {
         String errMsg = "Invalid input: ";
         boolean valid = true;
 
-        if(name.trim().isEmpty()) {
+        if(name == null || name.trim().isEmpty()) {
             valid = false;
             errMsg += "name field is empty, ";
         }
-        if(ip.trim().isEmpty()) {
+        if(outputId == null || outputId.trim().isEmpty()) {
+            valid = false;
+            errMsg += "no VirtualOutput selected, ";
+        }
+        if(ip == null || ip.trim().isEmpty()) {
             valid = false;
             errMsg += "ip field is empty, ";
         }

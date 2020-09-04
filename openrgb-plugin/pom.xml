@@ -57,9 +57,11 @@
                             <goal>shade</goal>
                         </goals>
                         <configuration>
+                            <minimizeJar>true</minimizeJar>
                             <artifactSet>
                                 <includes>
                                     <include>de.lars:openrgb-wrapper</include>
+                                    <include>org.jetbrains.kotlin:kotlin-stdlib</include>
                                 </includes>
                             </artifactSet>
                         </configuration>
