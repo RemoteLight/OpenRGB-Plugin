@@ -116,6 +116,14 @@ public class OpenRgbPlugin extends Plugin {
     }
 
     /**
+     * Remove existing handler from the set
+     * @param handler   the handler to remove
+     */
+    public void removeHandler(OutputHandler handler) {
+        setHandler.remove(handler);
+    }
+
+    /**
      * Create a new output handler instance
      * @param holder    values holder
      * @param output    virtual output

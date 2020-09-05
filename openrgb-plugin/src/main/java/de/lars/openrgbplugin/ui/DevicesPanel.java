@@ -47,6 +47,12 @@ public class DevicesPanel extends JPanel {
         panelDeviceList.removeAll();
         for(final OutputHandler handler : instance.getHandlerSet()) {
             ListElement el = new ListElement();
+            el.addMouseListener(new MouseAdapter() {
+                @Override
+                public void mouseClicked(MouseEvent e) {
+                    editHandler(handler);
+                }
+            });
 
             boolean activeDevice = handler.getOpenRGB().getClient().isConnected();
             if(activeDevice) {
@@ -59,13 +65,19 @@ public class DevicesPanel extends JPanel {
             el.add(Box.createHorizontalStrut(10));
 
             if(activeDevice) {
-                JLabel lblConnection = new JLabel(String.format("Connected to %s:%d; Device %d",
+                JLabel lblConnection = new JLabel(String.format("Connected to %s:%d Device ID: %d",
                         handler.getOpenRGB().getClient().getConnectionOptions().getHostString(),
                         handler.getOpenRGB().getClient().getConnectionOptions().getPort(),
                         handler.getDeviceId()));
+                lblConnection.setForeground(Style.textColorDarker);
                 el.add(lblConnection);
             }
             el.add(Box.createHorizontalGlue());
+
+            JButton btnDelete = new JButton("Delete");
+            configureBorderlessButton(btnDelete);
+            btnDelete.addActionListener(e -> removeHandler(handler));
+            el.add(btnDelete);
 
             JButton btnEdit = new JButton("Edit");
             configureBorderlessButton(btnEdit);
@@ -104,6 +116,15 @@ public class DevicesPanel extends JPanel {
         ToolsPanelNavItem navItem = new ToolsPanelNavItem("OpenRGB Configuration", setupPanel, setupPanel);
 
         context.navigateUp(navItem);
+    }
+
+    /**
+     * Remove handler from set and update device list
+     * @param handler   the handler to remove
+     */
+    private void removeHandler(OutputHandler handler) {
+        instance.removeHandler(handler);
+        updateDeviceEntryPanels();
     }
 
     public static void configureBorderlessButton(JButton btn) {

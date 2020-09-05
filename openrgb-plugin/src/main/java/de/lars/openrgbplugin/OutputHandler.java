@@ -147,6 +147,36 @@ public class OutputHandler implements VirtualOutputListener, PixelStreamReceiver
                 openRGB.getClient().getConnectionOptions().getHostString(),
                 openRGB.getClient().getConnectionOptions().getPort()));
         // connect orgb client
+        if(!connect())
+            return;
+        // check for valid device id
+        if(!checkDeviceId()) {
+            OpenRgbPlugin.getInstance().getInterface().getNotificationManager().addNotification(
+                    new Notification(NotificationType.ERROR, "OpenRGB Plugin (" + name + ")",
+                            "Invalid device id. Please check OpenRGB plugin configuration and re-activate the output."));
+            // disable pixel output
+            enabled = false;
+            return;
+        }
+        updateOutputPixel();
+    }
+
+    @Override
+    public void onDeactivate(VirtualOutput virtualOutput) {
+        OpenRgbPlugin.print(String.format("(%s) Disconnecting from OpenRGB server: %s:%d",
+                virtualOutput.getId(),
+                openRGB.getClient().getConnectionOptions().getHostString(),
+                openRGB.getClient().getConnectionOptions().getPort()));
+        // disconnect orgb client
+        disconnect();
+    }
+
+    /**
+     * Connect OpenRGB client to server. Will set {@code enabled} to false on failure,
+     * otherwise set {@code enabled} to true.
+     * @return  true if client is connected, false if the connection failed
+     */
+    public boolean connect() {
         try {
             openRGB.connect();
         } catch (IOException e) {
@@ -158,28 +188,16 @@ public class OutputHandler implements VirtualOutputListener, PixelStreamReceiver
                             String.format("Could not connect to %s:%d. Please check OpenRGB plugin configuration and re-activate the output.", ip, port)));
             // disable pixel output
             enabled = false;
-            return;
-        }
-        // check for valid device id
-        if(!checkDeviceId()) {
-            OpenRgbPlugin.getInstance().getInterface().getNotificationManager().addNotification(
-                    new Notification(NotificationType.ERROR, "OpenRGB Plugin (" + name + ")",
-                            "Invalid device id. Please check OpenRGB plugin configuration and re-activate the output."));
-            // disable pixel output
-            enabled = false;
-            return;
+            return false;
         }
         enabled = true;
-        updateOutputPixel();
+        return true;
     }
 
-    @Override
-    public void onDeactivate(VirtualOutput virtualOutput) {
-        OpenRgbPlugin.print(String.format("(%s) Disconnecting from OpenRGB server: %s:%d",
-                virtualOutput.getId(),
-                openRGB.getClient().getConnectionOptions().getHostString(),
-                openRGB.getClient().getConnectionOptions().getPort()));
-        // disconnect orgb client
+    /**
+     * Disconnect OpenRGB client and set {@code enabled} to false.
+     */
+    public void disconnect() {
         try {
             openRGB.disconnect();
         } catch (IOException e) {
@@ -187,6 +205,15 @@ public class OutputHandler implements VirtualOutputListener, PixelStreamReceiver
         } finally {
             enabled = false;
         }
+    }
+
+    /**
+     * Disconnect and re-connect OpenRGB client.
+     */
+    public void reconnect() {
+        OpenRgbPlugin.print("(" + getName() + ") Reconnecting OpenRGB client...");
+        disconnect();
+        connect();
     }
 
     public String getName() {
