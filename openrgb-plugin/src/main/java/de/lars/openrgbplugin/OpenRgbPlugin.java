@@ -163,16 +163,16 @@ public class OpenRgbPlugin extends Plugin {
             return true;
         try {
             OpenRgbPlugin.print(String.format("Connecting to OpenRGB server: %s:%d",
-                    openRGB.getClient().getConnectionOptions().getHostString(),
-                    openRGB.getClient().getConnectionOptions().getPort()));
+                    openRGB.getClient().getHostname(),
+                    openRGB.getClient().getPort()));
             return openRGB.connect();
         } catch (IOException e) {
-            String ip = openRGB.getClient().getConnectionOptions().getHostString();
-            int port = openRGB.getClient().getConnectionOptions().getPort();
+            String ip = openRGB.getClient().getHostname();
+            int port = openRGB.getClient().getPort();
             OpenRgbPlugin.print(String.format("Error while connecting to OpenRGB server %s:%d. Error: %S", ip, port, e.getMessage()));
             OpenRgbPlugin.getInstance().getInterface().getNotificationManager().addNotification(
                     new Notification(NotificationType.ERROR, "OpenRGB Plugin",
-                            String.format("Could not connect to %s:%d. Please check OpenRGB plugin configuration and re-activate the output.", ip, port)));
+                            String.format("Could not connect to %s:%d. Please check OpenRGB plugin configuration and try again", ip, port)));
             return false;
         }
     }

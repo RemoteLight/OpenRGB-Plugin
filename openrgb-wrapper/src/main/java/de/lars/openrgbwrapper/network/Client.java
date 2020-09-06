@@ -8,7 +8,8 @@ import java.net.Socket;
 
 public class Client {
 
-    private InetSocketAddress address;
+    private String hostname;
+    private int port;
     private Socket socket;
     private DataOutputStream outStream;
     private DataInputStream inStream;
@@ -36,16 +37,25 @@ public class Client {
     public boolean setConnectionOptions(String hostname, int port) {
         // can not set new connection options while client is connected
         if(connected) return false;
-        address = new InetSocketAddress(hostname, port);
+        this.hostname = hostname;
+        this.port = port;
         return true;
     }
 
     /**
-     * Get the connection options of this client
-     * @return          hostname and port as InetSocketAddress
+     * Get the hostname
+     * @return          hostname as String
      */
-    public InetSocketAddress getConnectionOptions() {
-        return address;
+    public String getHostname() {
+        return hostname;
+    }
+
+    /**
+     * Get the port
+     * @return          port as int
+     */
+    public int getPort() {
+        return port;
     }
 
     /**
@@ -71,6 +81,7 @@ public class Client {
         socket = new Socket();
 
         try {
+            InetSocketAddress address = new InetSocketAddress(hostname, port);
             // connect to address
             socket.connect(address, timeout);
             // initialize output and input streams

@@ -12,6 +12,8 @@ import de.lars.remotelightclient.utils.ui.UiUtils;
 
 import javax.swing.*;
 import javax.swing.border.CompoundBorder;
+import javax.swing.event.DocumentEvent;
+import javax.swing.event.DocumentListener;
 import java.awt.*;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
@@ -65,7 +67,8 @@ public class DeviceGroupsPanel extends JPanel {
         JLabel lblServerPort = new JLabel("Port:");
         lblServerPort.setForeground(Style.textColor);
 
-        JTextField fieldServerIp = new JTextField(20);
+        JTextField fieldServerIp = new JTextField();
+        fieldServerIp.setColumns(20);
         JFormattedTextField fieldServerPort = new JFormattedTextField(UserInterfaceUtil.getIntFieldFormatter());
         fieldServerPort.setColumns(5);
 
@@ -99,19 +102,29 @@ public class DeviceGroupsPanel extends JPanel {
 
             // set info label text
             lblConnectionState.setText(String.format("Connected to %s:%d",
-                    instance.getOpenRGB().getClient().getConnectionOptions().getHostString(),
-                    instance.getOpenRGB().getClient().getConnectionOptions().getPort()));
+                    instance.getOpenRGB().getClient().getHostname(),
+                    instance.getOpenRGB().getClient().getPort()));
         }
 
         // add value change listener
-        fieldServerIp.addPropertyChangeListener("value", e -> {
-            // TODO
-            System.out.println("###Value  IP: " + fieldServerIp.getText());
+        fieldServerIp.getDocument().addDocumentListener(new DocumentListener() {
+            @Override
+            public void insertUpdate(DocumentEvent e) {
+                valueChanged();
+            }
+            @Override
+            public void removeUpdate(DocumentEvent e) {
+                valueChanged();
+            }
+            @Override
+            public void changedUpdate(DocumentEvent e) {
+                valueChanged();
+            }
+            void valueChanged() {
+                instance.setOpenRgbConnection(fieldServerIp.getText(), (Integer) fieldServerPort.getValue());
+            }
         });
-        fieldServerPort.addPropertyChangeListener("value", e -> {
-            // TODO
-            System.out.println("###Value  Port: " + fieldServerPort.getValue());
-        });
+        fieldServerPort.addPropertyChangeListener("value", e -> instance.setOpenRgbConnection(fieldServerIp.getText(), (Integer) fieldServerPort.getValue()));
         panelSettings.updateUI();
     }
 

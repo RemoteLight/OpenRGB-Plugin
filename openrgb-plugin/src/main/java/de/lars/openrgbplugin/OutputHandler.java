@@ -1,7 +1,6 @@
 package de.lars.openrgbplugin;
 
 import de.lars.openrgbwrapper.Device;
-import de.lars.openrgbwrapper.OpenRGB;
 import de.lars.openrgbwrapper.models.Color;
 import de.lars.remotelightcore.devices.virtual.PixelStreamReceiver;
 import de.lars.remotelightcore.devices.virtual.VirtualOutput;
@@ -17,7 +16,6 @@ import java.util.List;
 public class OutputHandler implements VirtualOutputListener, PixelStreamReceiver {
 
     private final OpenRgbPlugin plugin;
-    private final OpenRGB openRGB;
     private String name;
     private VirtualOutput virtualOutput;
     private List<Integer> devices;
@@ -33,7 +31,6 @@ public class OutputHandler implements VirtualOutputListener, PixelStreamReceiver
      */
     public OutputHandler(VirtualOutput output, List<Integer> devices) {
         this.plugin = OpenRgbPlugin.getInstance();
-        this.openRGB = plugin.getOpenRGB();
         this.virtualOutput = output;
         this.devices = devices;
         cachedDeviceControllers = new ArrayList<>();
@@ -60,14 +57,14 @@ public class OutputHandler implements VirtualOutputListener, PixelStreamReceiver
      * @return      the number of devices
      */
     public int getOpenRGBDeviceCount() {
-        return openRGB.getControllerCount();
+        return plugin.getOpenRGB().getControllerCount();
     }
 
     /**
      * Updates local cached OpenRGB devices/controller data (only if client is connected)
      */
     public void updateOpenRgbDevices() {
-        if(openRGB.getClient().isConnected()) {
+        if(plugin.getOpenRGB().getClient().isConnected()) {
             // clear cached list
             cachedDeviceControllers.clear();
             // get controller count
@@ -78,14 +75,14 @@ public class OutputHandler implements VirtualOutputListener, PixelStreamReceiver
                 // check if device is valid
                 if(deviceId < controllerCount) {
                     // add to cache list
-                    cachedDeviceControllers.add(openRGB.getControllerData(deviceId));
+                    cachedDeviceControllers.add(plugin.getOpenRGB().getControllerData(deviceId));
                 } else {
                     // print error message and remove device id from list
-                    String msg = String.format("(%s) Found invalid device ID: %d There are only %d OpenRGB devices (max device ID: %d). Removing device from list.",
-                            getName(), deviceId, controllerCount, controllerCount-1);
-                    OpenRgbPlugin.print(msg);
+                    OpenRgbPlugin.print(String.format("(%s) Found invalid device ID: %d There are only %d OpenRGB devices (max device ID: %d). Removing device from list.",
+                            getName(), deviceId, controllerCount, controllerCount-1));
                     OpenRgbPlugin.getInstance().getInterface().getNotificationManager().addNotification(
-                            new Notification(NotificationType.WARN,"OpenRGB Plugin (" + getName() + ")", msg));
+                            new Notification(NotificationType.WARN,"OpenRGB Plugin (" + getName() + ")",
+                                    String.format("Invalid device ID: %d. Max device ID is %d. Removing device from list.", deviceId, controllerCount-1)));
                     it.remove();
                 }
             }
@@ -140,7 +137,7 @@ public class OutputHandler implements VirtualOutputListener, PixelStreamReceiver
         // check if output is enabled
         if(!enabled) return;
         // check if client is still connected
-        if(!openRGB.isConnected()) {
+        if(!plugin.getOpenRGB().isConnected()) {
             OpenRgbPlugin.getInstance().getInterface().getNotificationManager().addNotification(
                 new Notification(NotificationType.ERROR, "OpenRGB Plugin (" + name + ")", "Lost connection to OpenRGB SDK server."));
             enabled = false;
@@ -169,7 +166,7 @@ public class OutputHandler implements VirtualOutputListener, PixelStreamReceiver
             Color[] subArr = Arrays.copyOfRange(convertColors(colors), index, index + device.leds.length);
             // increment index
             index += device.leds.length;
-            openRGB.updateLeds(device.deviceId, subArr);
+            plugin.getOpenRGB().updateLeds(device.deviceId, subArr);
         }
     }
 
