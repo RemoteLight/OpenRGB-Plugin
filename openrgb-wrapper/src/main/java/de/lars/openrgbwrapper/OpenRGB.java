@@ -139,7 +139,7 @@ public class OpenRGB {
     public Device getControllerData(int deviceId) {
         sendMessage(PacketIdentifier.REQUEST_CONTROLLER_DATA, deviceId);
         byte[] data = readMessage();
-        return data != null ? Device.decode(data) : null;
+        return data != null ? Device.decode(deviceId, data) : null;
     }
 
     /**

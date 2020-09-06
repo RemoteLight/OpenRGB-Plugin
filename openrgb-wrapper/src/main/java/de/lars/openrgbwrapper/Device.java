@@ -15,6 +15,7 @@ import static de.lars.openrgbwrapper.utils.BufferUtil.readString;
 
 public class Device {
 
+    public final int deviceId;
     public final DeviceType type;
     public final String name;
     public final String description;
@@ -27,7 +28,8 @@ public class Device {
     public final Led[] leds;
     public final Color[] colors;
 
-    public Device(DeviceType type, String name, String description, String version, String serial, String location, int activeMode, Mode[] modes, Zone[] zones, Led[] leds, Color[] colors) {
+    public Device(int deviceId, DeviceType type, String name, String description, String version, String serial, String location, int activeMode, Mode[] modes, Zone[] zones, Led[] leds, Color[] colors) {
+        this.deviceId = deviceId;
         this.type = type;
         this.name = name;
         this.description = description;
@@ -41,7 +43,7 @@ public class Device {
         this.colors = colors;
     }
 
-    public static Device decode(byte[] data) {
+    public static Device decode(int deviceId, byte[] data) {
         ByteBuffer buffer = ByteBuffer.wrap(data).order(ByteOrder.LITTLE_ENDIAN);
         int offset = 4;
 
@@ -98,7 +100,7 @@ public class Device {
         Color[] colors = colorsPair.first;
         offset = colorsPair.second;
 
-        return new Device(type, name, description, version, serial,
+        return new Device(deviceId, type, name, description, version, serial,
                 location, activeMode, modes, zones, leds, colors);
     }
 
