@@ -64,7 +64,7 @@ public class DeviceGroupsPanel extends JPanel {
         panelSettings.removeAll();
         JLabel lblServerIp = new JLabel("OpenRGB Server IP:");
         lblServerIp.setForeground(Style.textColor);
-        JLabel lblServerPort = new JLabel("Port:");
+        JLabel lblServerPort = new JLabel("OpenRGB Port:");
         lblServerPort.setForeground(Style.textColor);
 
         JTextField fieldServerIp = new JTextField();
