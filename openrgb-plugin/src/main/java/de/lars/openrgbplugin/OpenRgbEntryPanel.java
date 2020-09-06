@@ -1,6 +1,6 @@
 package de.lars.openrgbplugin;
 
-import de.lars.openrgbplugin.ui.DevicesPanel;
+import de.lars.openrgbplugin.ui.DeviceGroupsPanel;
 import de.lars.remotelightclient.ui.panels.tools.ToolsPanel;
 import de.lars.remotelightclient.ui.panels.tools.ToolsPanelEntry;
 
@@ -18,6 +18,6 @@ public class OpenRgbEntryPanel extends ToolsPanelEntry {
 
     @Override
     public JPanel getMenuPanel(ToolsPanel context) {
-        return new DevicesPanel(context, OpenRgbPlugin.getInstance());
+        return new DeviceGroupsPanel(context, OpenRgbPlugin.getInstance());
     }
 }

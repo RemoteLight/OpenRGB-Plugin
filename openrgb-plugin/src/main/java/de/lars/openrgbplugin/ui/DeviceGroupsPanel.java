@@ -2,11 +2,13 @@ package de.lars.openrgbplugin.ui;
 
 import de.lars.openrgbplugin.OpenRgbPlugin;
 import de.lars.openrgbplugin.OutputHandler;
+import de.lars.openrgbplugin.utils.UserInterfaceUtil;
 import de.lars.remotelightclient.ui.Style;
 import de.lars.remotelightclient.ui.components.ListElement;
 import de.lars.remotelightclient.ui.panels.tools.ToolsPanel;
 import de.lars.remotelightclient.ui.panels.tools.ToolsPanelNavItem;
 import de.lars.remotelightclient.utils.ui.MenuIconFont;
+import de.lars.remotelightclient.utils.ui.UiUtils;
 
 import javax.swing.*;
 import javax.swing.border.CompoundBorder;
@@ -14,25 +16,37 @@ import java.awt.*;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 
-public class DevicesPanel extends JPanel {
+public class DeviceGroupsPanel extends JPanel {
 
     private final ToolsPanel context;
     private final OpenRgbPlugin instance;
+    private final JPanel panelSettings;
     private final JPanel panelDeviceList;
 
-    public DevicesPanel(ToolsPanel context, OpenRgbPlugin instance) {
+    public DeviceGroupsPanel(ToolsPanel context, OpenRgbPlugin instance) {
         this.context = context;
         this.instance = instance;
         setBackground(Style.panelBackground);
         setLayout(new BorderLayout());
         setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
 
+        panelSettings = new JPanel();
+        panelSettings.setBackground(Style.panelDarkBackground);
+        panelSettings.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5));
+        panelSettings.setLayout(new BoxLayout(panelSettings, BoxLayout.Y_AXIS));
+
         panelDeviceList = new JPanel();
         panelDeviceList.setBackground(Style.panelDarkBackground);
         panelDeviceList.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5));
         panelDeviceList.setLayout(new BoxLayout(panelDeviceList, BoxLayout.Y_AXIS));
 
-        JScrollPane scrollPane = new JScrollPane(panelDeviceList);
+        JPanel panelWrapper = new JPanel();
+        panelWrapper.setBackground(getBackground());
+        panelWrapper.setLayout(new BorderLayout());
+        panelWrapper.add(panelSettings, BorderLayout.NORTH);
+        panelWrapper.add(panelDeviceList, BorderLayout.CENTER);
+
+        JScrollPane scrollPane = new JScrollPane(panelWrapper);
         scrollPane.setViewportBorder(null);
         scrollPane.setBorder(BorderFactory.createEmptyBorder());
         scrollPane.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
@@ -40,7 +54,65 @@ public class DevicesPanel extends JPanel {
         scrollPane.getVerticalScrollBar().setUnitIncrement(8);
         add(scrollPane, BorderLayout.CENTER);
 
+        setupSettingsPanel();
         updateDeviceEntryPanels();
+    }
+
+    public void setupSettingsPanel() {
+        panelSettings.removeAll();
+        JLabel lblServerIp = new JLabel("OpenRGB Server IP:");
+        lblServerIp.setForeground(Style.textColor);
+        JLabel lblServerPort = new JLabel("Port:");
+        lblServerPort.setForeground(Style.textColor);
+
+        JTextField fieldServerIp = new JTextField(20);
+        JFormattedTextField fieldServerPort = new JFormattedTextField(UserInterfaceUtil.getIntFieldFormatter());
+        fieldServerPort.setColumns(5);
+
+        // set stored values
+        fieldServerIp.setText(instance.getOpenRgbIP());
+        fieldServerPort.setValue(instance.getOpenRgbPort());
+
+        panelSettings.add(UserInterfaceUtil.createSettingBgr(panelSettings.getBackground(), lblServerIp, fieldServerIp));
+        panelSettings.add(UserInterfaceUtil.createSettingBgr(panelSettings.getBackground(), lblServerPort, fieldServerPort));
+
+        boolean isConnected = instance.getOpenRGB().isConnected();
+        JButton btnToggleClient = new JButton(isConnected ? "Disconnect" : "Connect");
+        UiUtils.configureButton(btnToggleClient);
+        btnToggleClient.addActionListener(e -> {
+            if(OpenRgbPlugin.getInstance().getOpenRGB().isConnected())
+                OpenRgbPlugin.getInstance().disconnectOpenRGB();
+            else
+                OpenRgbPlugin.getInstance().connectOpenRGB();
+            // reload settings panel
+            setupSettingsPanel();
+        });
+
+        JLabel lblConnectionState = new JLabel("Client not connected");
+        lblConnectionState.setForeground(Style.textColor);
+        panelSettings.add(UserInterfaceUtil.createSettingBgr(panelSettings.getBackground(), btnToggleClient, lblConnectionState));
+
+        if(isConnected) {
+            // disable if OpenRGB client is connected
+            fieldServerIp.setEnabled(false);
+            fieldServerPort.setEnabled(false);
+
+            // set info label text
+            lblConnectionState.setText(String.format("Connected to %s:%d",
+                    instance.getOpenRGB().getClient().getConnectionOptions().getHostString(),
+                    instance.getOpenRGB().getClient().getConnectionOptions().getPort()));
+        }
+
+        // add value change listener
+        fieldServerIp.addPropertyChangeListener("value", e -> {
+            // TODO
+            System.out.println("###Value  IP: " + fieldServerIp.getText());
+        });
+        fieldServerPort.addPropertyChangeListener("value", e -> {
+            // TODO
+            System.out.println("###Value  Port: " + fieldServerPort.getValue());
+        });
+        panelSettings.updateUI();
     }
 
     public void updateDeviceEntryPanels() {
@@ -54,7 +126,7 @@ public class DevicesPanel extends JPanel {
                 }
             });
 
-            boolean activeDevice = handler.getOpenRGB().getClient().isConnected();
+            boolean activeDevice = instance.getEnabledHandler().contains(handler);
             if(activeDevice) {
                 el.setBorder(new CompoundBorder(BorderFactory.createLineBorder(Style.accent), el.getBorder()));
             }
@@ -65,10 +137,9 @@ public class DevicesPanel extends JPanel {
             el.add(Box.createHorizontalStrut(10));
 
             if(activeDevice) {
-                JLabel lblConnection = new JLabel(String.format("Connected to %s:%d Device ID: %d",
-                        handler.getOpenRGB().getClient().getConnectionOptions().getHostString(),
-                        handler.getOpenRGB().getClient().getConnectionOptions().getPort(),
-                        handler.getDeviceId()));
+                JLabel lblConnection = new JLabel(String.format("Enabled and attached to %s (%d LEDs)",
+                        handler.getVirtualOutput().getId(),
+                        handler.getTotalPixelNumber()));
                 lblConnection.setForeground(Style.textColorDarker);
                 el.add(lblConnection);
             }
@@ -93,7 +164,7 @@ public class DevicesPanel extends JPanel {
         elAdd.add(new JLabel(Style.getFontIcon(MenuIconFont.MenuIcon.ADD)));
         elAdd.add(Box.createHorizontalStrut(5));
 
-        JLabel lblAdd = new JLabel("Add OpenRGB Device");
+        JLabel lblAdd = new JLabel("Add OpenRGB Device Group");
         lblAdd.setForeground(Style.textColor);
         elAdd.add(lblAdd);
 

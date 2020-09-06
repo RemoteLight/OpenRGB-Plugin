@@ -9,16 +9,19 @@ import de.lars.remotelightcore.devices.virtual.VirtualOutputListener;
 import de.lars.remotelightcore.notification.Notification;
 import de.lars.remotelightcore.notification.NotificationType;
 
-import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Iterator;
+import java.util.List;
 
 public class OutputHandler implements VirtualOutputListener, PixelStreamReceiver {
 
-    private String name;
+    private final OpenRgbPlugin plugin;
     private final OpenRGB openRGB;
+    private String name;
     private VirtualOutput virtualOutput;
-    private int deviceId;
-    private Device cachedDevice;
+    private List<Integer> devices;
+    private final List<Device> cachedDeviceControllers;
     /** enable or disable pixel output */
     private boolean enabled = false;
 
@@ -26,13 +29,14 @@ public class OutputHandler implements VirtualOutputListener, PixelStreamReceiver
      * Create a new OutputHandler that forwards received data from a virtual output to
      * the OpenRGB SDK server.
      * @param output        virtual output to listen to
-     * @param openRGB       OpenRGB client instance
-     * @param deviceId      OpenRGB device id
+     * @param devices       list of OpenRGB devices that should be controlled
      */
-    public OutputHandler(VirtualOutput output, OpenRGB openRGB, int deviceId) {
+    public OutputHandler(VirtualOutput output, List<Integer> devices) {
+        this.plugin = OpenRgbPlugin.getInstance();
+        this.openRGB = plugin.getOpenRGB();
         this.virtualOutput = output;
-        this.openRGB = openRGB;
-        this.deviceId = deviceId;
+        this.devices = devices;
+        cachedDeviceControllers = new ArrayList<>();
     }
 
     /**
@@ -52,29 +56,61 @@ public class OutputHandler implements VirtualOutputListener, PixelStreamReceiver
     }
 
     /**
-     * Check whether the device id is valid or not
-     * @return      true if device id is valid
+     * Get the amount of OpenRGB devices/controllers
+     * @return      the number of devices
      */
-    public boolean checkDeviceId() {
-        return this.deviceId >= 0 && this.deviceId < openRGB.getControllerCount();
+    public int getOpenRGBDeviceCount() {
+        return openRGB.getControllerCount();
     }
 
     /**
-     * Updates local cached OpenRGB device/controller data (only if client is connected)
+     * Updates local cached OpenRGB devices/controller data (only if client is connected)
      */
-    public void updateOpenRgbDevice() {
-        if(openRGB.getClient().isConnected())
-            cachedDevice = openRGB.getControllerData(deviceId);
+    public void updateOpenRgbDevices() {
+        if(openRGB.getClient().isConnected()) {
+            // clear cached list
+            cachedDeviceControllers.clear();
+            // get controller count
+            int controllerCount = getOpenRGBDeviceCount();
+            // loop through all device ids
+            for(Iterator<Integer> it = devices.iterator(); it.hasNext();) {
+                int deviceId = it.next();
+                // check if device is valid
+                if(deviceId < controllerCount) {
+                    // add to cache list
+                    cachedDeviceControllers.add(openRGB.getControllerData(deviceId));
+                } else {
+                    // print error message and remove device id from list
+                    String msg = String.format("(%s) Found invalid device ID: %d There are only %d OpenRGB devices (max device ID: %d). Removing device from list.",
+                            getName(), deviceId, controllerCount, controllerCount-1);
+                    OpenRgbPlugin.print(msg);
+                    OpenRgbPlugin.getInstance().getInterface().getNotificationManager().addNotification(
+                            new Notification(NotificationType.WARN,"OpenRGB Plugin (" + getName() + ")", msg));
+                    it.remove();
+                }
+            }
+        }
     }
 
     /**
-     * Get the OpenRGB device/controller data
-     * @return      Device instance or null if client is not connected
+     * Get the OpenRGB devices/controller data
+     * @return      list of devices or empty list if client is not connected
      */
-    public Device getOpenRgbDevice() {
-        if(cachedDevice == null)
-            updateOpenRgbDevice();
-        return cachedDevice;
+    public List<Device> getOpenRgbDevices() {
+        if(cachedDeviceControllers.isEmpty())
+            updateOpenRgbDevices();
+        return cachedDeviceControllers;
+    }
+
+    /**
+     * Get the total pixel number of all devices in the list
+     * @return      total amount of pixels
+     */
+    public int getTotalPixelNumber() {
+        int sum = 0;
+        for(Device device : cachedDeviceControllers)
+            sum += device.leds.length;
+        return sum;
     }
 
     /**
@@ -82,21 +118,13 @@ public class OutputHandler implements VirtualOutputListener, PixelStreamReceiver
      * If it is not so, update pixel number of the virtual output.
      */
     public void updateOutputPixel() {
-        if(getOpenRgbDevice() == null)
+        if(getOpenRgbDevices().isEmpty())
             return;
-        int pix = getOpenRgbDevice().leds.length;
+        int pix = getTotalPixelNumber();
         if(virtualOutput.getPixels() != pix) {
             virtualOutput.setPixels(pix);
             OpenRgbPlugin.print("Updated pixel number for '" + virtualOutput.getId() + "'. New pixel number: " + pix);
         }
-    }
-
-    /**
-     * Get the OpenRGB client used by this handler.
-     * @return      OpenRGB client instance
-     */
-    public OpenRGB getOpenRGB() {
-        return openRGB;
     }
 
     /**
@@ -118,17 +146,31 @@ public class OutputHandler implements VirtualOutputListener, PixelStreamReceiver
             enabled = false;
             return;
         }
+        // check if there are still output devices
+        if(getOpenRgbDevices().isEmpty()) {
+            OpenRgbPlugin.getInstance().getInterface().getNotificationManager().addNotification(
+                    new Notification(NotificationType.ERROR, "OpenRGB Plugin (" + name + ")", "Device group is empty. Please check plugin configuration and re-enable the output."));
+            enabled = false;
+            return;
+        }
         // check if pixel array length is valid
-        if(getOpenRgbDevice() != null && getOpenRgbDevice().leds.length != colors.length) {
+        if(getTotalPixelNumber() != colors.length) {
             // virtual output pixel is not equal to OpenRGB led count
             // update cached controller data
-            updateOpenRgbDevice();
+            updateOpenRgbDevices();
             // update virtual output pixel number
             updateOutputPixel();
             return; // skip this received data
         }
-        // send to OpenRGB
-        openRGB.updateLeds(deviceId, convertColors(colors));
+        // send data for each device to OpenRGB
+        int index = 0;
+        for(Device device : getOpenRgbDevices()) {
+            // split led data in to peaces for each device
+            Color[] subArr = Arrays.copyOfRange(convertColors(colors), index, index + device.leds.length);
+            // increment index
+            index += device.leds.length;
+            openRGB.updateLeds(device.deviceId, subArr);
+        }
     }
 
     /**
@@ -142,78 +184,26 @@ public class OutputHandler implements VirtualOutputListener, PixelStreamReceiver
 
     @Override
     public void onActivate(VirtualOutput virtualOutput) {
-        OpenRgbPlugin.print(String.format("(%s) Connecting to OpenRGB server: %s:%d",
-                virtualOutput.getId(),
-                openRGB.getClient().getConnectionOptions().getHostString(),
-                openRGB.getClient().getConnectionOptions().getPort()));
         // connect orgb client
-        if(!connect())
+        if(!plugin.connectOpenRGB())
             return;
-        // check for valid device id
-        if(!checkDeviceId()) {
+        // check for valid device id and update cached devices
+        updateOpenRgbDevices();
+        if(cachedDeviceControllers.isEmpty()) {
             OpenRgbPlugin.getInstance().getInterface().getNotificationManager().addNotification(
                     new Notification(NotificationType.ERROR, "OpenRGB Plugin (" + name + ")",
-                            "Invalid device id. Please check OpenRGB plugin configuration and re-activate the output."));
+                            "Empty device group. Please check OpenRGB plugin configuration and re-activate the output."));
             // disable pixel output
             enabled = false;
             return;
         }
+        enabled = true;
         updateOutputPixel();
     }
 
     @Override
     public void onDeactivate(VirtualOutput virtualOutput) {
-        OpenRgbPlugin.print(String.format("(%s) Disconnecting from OpenRGB server: %s:%d",
-                virtualOutput.getId(),
-                openRGB.getClient().getConnectionOptions().getHostString(),
-                openRGB.getClient().getConnectionOptions().getPort()));
-        // disconnect orgb client
-        disconnect();
-    }
-
-    /**
-     * Connect OpenRGB client to server. Will set {@code enabled} to false on failure,
-     * otherwise set {@code enabled} to true.
-     * @return  true if client is connected, false if the connection failed
-     */
-    public boolean connect() {
-        try {
-            openRGB.connect();
-        } catch (IOException e) {
-            String ip = openRGB.getClient().getConnectionOptions().getHostString();
-            int port = openRGB.getClient().getConnectionOptions().getPort();
-            OpenRgbPlugin.print(String.format("Error while connecting to OpenRGB server %s:%d. Error: %S", ip, port, e.getMessage()));
-            OpenRgbPlugin.getInstance().getInterface().getNotificationManager().addNotification(
-                    new Notification(NotificationType.ERROR, "OpenRGB Plugin (" + name + ")",
-                            String.format("Could not connect to %s:%d. Please check OpenRGB plugin configuration and re-activate the output.", ip, port)));
-            // disable pixel output
-            enabled = false;
-            return false;
-        }
-        enabled = true;
-        return true;
-    }
-
-    /**
-     * Disconnect OpenRGB client and set {@code enabled} to false.
-     */
-    public void disconnect() {
-        try {
-            openRGB.disconnect();
-        } catch (IOException e) {
-            OpenRgbPlugin.print("Error while disconnecting OpenRGB client: " + e.getMessage());
-        } finally {
-            enabled = false;
-        }
-    }
-
-    /**
-     * Disconnect and re-connect OpenRGB client.
-     */
-    public void reconnect() {
-        OpenRgbPlugin.print("(" + getName() + ") Reconnecting OpenRGB client...");
-        disconnect();
-        connect();
+        enabled = false;
     }
 
     public String getName() {
@@ -233,15 +223,35 @@ public class OutputHandler implements VirtualOutputListener, PixelStreamReceiver
         attachToOutput();
     }
 
-    public int getDeviceId() {
-        return deviceId;
+    public List<Integer> getDevices() {
+        return devices;
     }
 
-    public void setDeviceId(int deviceId) {
-        if(this.deviceId == deviceId)
+    /**
+     * Set the list of device ids and update cached devices and pixel number
+     * @param devices       new list of device ids
+     */
+    public void setDevices(List<Integer> devices) {
+        if(this.devices == devices)
             return;
-        this.deviceId = deviceId;
-        updateOpenRgbDevice();
+        this.devices = devices;
+        updateOpenRgbDevices();
         updateOutputPixel();
+    }
+
+    /**
+     * Add a single device id and update cached devices and pixel number
+     * @param deviceId      device id to add
+     */
+    public void addDeviceId(int deviceId) {
+        if(this.devices.contains(deviceId))
+            return;
+        this.devices.add(deviceId);
+        updateOpenRgbDevices();
+        updateOutputPixel();
+    }
+
+    public boolean isEnabled() {
+        return enabled;
     }
 }

@@ -2,8 +2,10 @@ package de.lars.openrgbplugin.ui;
 
 import de.lars.openrgbplugin.OpenRgbPlugin;
 import de.lars.openrgbplugin.OutputHandler;
+import de.lars.openrgbplugin.utils.UserInterfaceUtil;
 import de.lars.openrgbplugin.utils.ValueHolder;
 import de.lars.remotelightclient.ui.Style;
+import de.lars.remotelightclient.ui.components.ListElement;
 import de.lars.remotelightclient.ui.panels.tools.ToolsNavListener;
 import de.lars.remotelightclient.ui.panels.tools.ToolsPanel;
 import de.lars.remotelightclient.utils.ui.UiUtils;
@@ -13,23 +15,30 @@ import de.lars.remotelightcore.notification.Notification;
 import de.lars.remotelightcore.notification.NotificationType;
 
 import javax.swing.*;
-import javax.swing.text.NumberFormatter;
 import java.awt.*;
-import java.text.NumberFormat;
+import java.util.ArrayList;
+import java.util.List;
 
 public class SetupPanel extends JPanel implements ToolsNavListener {
 
     private final OpenRgbPlugin instance;
     private final ToolsPanel context;
-    private OutputHandler handler;
-    private final DevicesPanel devicesPanel;
+    private final OutputHandler handler;
+    private final List<Integer> listDevices;
+    private final DeviceGroupsPanel devicesPanel;
     private final JPanel panelSettings;
+    private JPanel panelDeviceList;
 
-    public SetupPanel(ToolsPanel context, OutputHandler handler, DevicesPanel devicesPanel) {
+    public SetupPanel(ToolsPanel context, OutputHandler handler, DeviceGroupsPanel devicesPanel) {
         this.context = context;
         this.devicesPanel = devicesPanel;
         instance = OpenRgbPlugin.getInstance();
         this.handler = handler;
+
+        if(handler != null)
+            listDevices = handler.getDevices();
+        else
+            listDevices = new ArrayList<>();
 
         setBackground(Style.panelBackground);
         setLayout(new BorderLayout());
@@ -58,7 +67,7 @@ public class SetupPanel extends JPanel implements ToolsNavListener {
         lblName.setForeground(Style.textColor);
 
         JTextField fieldName = new JTextField(20);
-        panelSettings.add(createSettingBgr(lblName, fieldName));
+        panelSettings.add(UserInterfaceUtil.createSettingBgr(lblName, fieldName));
 
         JLabel lblVirtOutput = new JLabel("VirtualOutput:");
         lblVirtOutput.setForeground(Style.textColor);
@@ -66,41 +75,48 @@ public class SetupPanel extends JPanel implements ToolsNavListener {
         JComboBox<String> comboVirtOutputs = new JComboBox<>();
         for(Device device : instance.getInterface().getDeviceManager().getDevices()) {
             if(device instanceof VirtualOutput) {
-                comboVirtOutputs.addItem(device.getId());
-                if(handler != null && handler.getVirtualOutput().getId().equals(device.getId()))
+                if(handler != null && instance.getHandlerByVirtualOutput(device.getId()) == handler) {
+                    comboVirtOutputs.addItem(device.getId());
                     comboVirtOutputs.setSelectedIndex(comboVirtOutputs.getItemCount() - 1);
+                } else if(!instance.isVirtualOutputUsed(device.getId())) {
+                    comboVirtOutputs.addItem(device.getId());
+                }
             }
         }
-        panelSettings.add(createSettingBgr(lblVirtOutput, comboVirtOutputs));
+        panelSettings.add(UserInterfaceUtil.createSettingBgr(lblVirtOutput, comboVirtOutputs));
 
-        JLabel lblServerIp = new JLabel("OpenRGB Server IP:");
-        lblServerIp.setForeground(Style.textColor);
-        JLabel lblServerPort = new JLabel("Port:");
-        lblServerPort.setForeground(Style.textColor);
-
-        JTextField fieldServerIp = new JTextField(20);
-        JFormattedTextField fieldServerPort = new JFormattedTextField(getIntFieldFormatter());
-        fieldServerPort.setColumns(5);
-        panelSettings.add(createSettingBgr(lblServerIp, fieldServerIp, lblServerPort, fieldServerPort));
-
-        JLabel lblDeviceId = new JLabel("OpenRGB Device ID:");
+        JLabel lblDeviceId = new JLabel("OpenRGB Device ID (index):");
         lblDeviceId.setForeground(Style.textColor);
 
-        JFormattedTextField fieldDeviceId = new JFormattedTextField(getIntFieldFormatter());
-        fieldDeviceId.setColumns(10);
-        panelSettings.add(createSettingBgr(lblDeviceId, fieldDeviceId));
+        JFormattedTextField fieldDeviceId = new JFormattedTextField(UserInterfaceUtil.getIntFieldFormatter());
+        fieldDeviceId.setColumns(5);
+        JButton btnAddDeviceId = new JButton("Add device");
+        UiUtils.configureButton(btnAddDeviceId);
+        btnAddDeviceId.addActionListener(e -> {
+            if(fieldDeviceId.getValue() == null) return;
+            int value = (int) fieldDeviceId.getValue();
+            if(value < 0 || listDevices.contains(value)) {
+                instance.getInterface().getNotificationManager().addNotification(
+                        new Notification(NotificationType.ERROR, "OpenRGB Plugin", "Invalid ID or list contains already ID."));
+                return;
+            }
+            listDevices.add(value);
+            fieldDeviceId.setText("");
+            updateDeviceListPanel();
+        });
+        panelSettings.add(UserInterfaceUtil.createSettingBgr(lblDeviceId, fieldDeviceId, btnAddDeviceId));
+
+        panelDeviceList = new JPanel();
+        panelDeviceList.setBackground(Style.panelDarkBackground);
+        panelDeviceList.setLayout(new BoxLayout(panelDeviceList, BoxLayout.Y_AXIS));
+        panelDeviceList.setAlignmentX(Component.LEFT_ALIGNMENT);
+        panelSettings.add(Box.createVerticalStrut(10));
+        panelSettings.add(panelDeviceList);
+        updateDeviceListPanel();
 
         if(handler != null) {
             // set stored values
             fieldName.setText(handler.getName());
-            fieldServerIp.setText(handler.getOpenRGB().getClient().getConnectionOptions().getHostString());
-            fieldServerPort.setValue(handler.getOpenRGB().getClient().getConnectionOptions().getPort());
-            fieldDeviceId.setValue(handler.getDeviceId());
-        } else {
-            // set default values
-            fieldServerIp.setText("127.0.0.1");
-            fieldServerPort.setValue(6742);
-            fieldDeviceId.setValue(0);
         }
 
         JButton btnAdd = new JButton(handler == null ? "Add OpenRGB Device" : "Save OpenRGB Device");
@@ -114,11 +130,9 @@ public class SetupPanel extends JPanel implements ToolsNavListener {
             ValueHolder holder = new ValueHolder(
                     fieldName.getText(),
                     (String) comboVirtOutputs.getSelectedItem(),
-                    fieldServerIp.getText(),
-                    (int) fieldServerPort.getValue(),
-                    (int) fieldDeviceId.getValue());
+                    listDevices);
 
-            if(validateInput(holder.getName(), holder.getOutputId(), holder.getOrgbIp(), holder.getOrgbPort(), holder.getDeviceId())) {
+            if(validateInput(holder.getName(), holder.getOutputId())) {
                 // get output
                 VirtualOutput output = OpenRgbPlugin.getVirtualOutput(instance.getInterface().getDeviceManager(), holder.getOutputId());
                 if (output == null) {
@@ -129,18 +143,8 @@ public class SetupPanel extends JPanel implements ToolsNavListener {
 
                 if(handler != null) { // set values to output handler
                     handler.setName(holder.getName());
-                    handler.setDeviceId(holder.getDeviceId());
+                    handler.setDevices(listDevices);
                     handler.setVirtualOutput(output);
-                    // compare ip and port and set only connection values if they were changed
-                    if(!OpenRgbPlugin.compareConnectionInfo(holder.getOrgbIp(), holder.getOrgbPort(),
-                            handler.getOpenRGB().getClient().getConnectionOptions().getHostString(),
-                            handler.getOpenRGB().getClient().getConnectionOptions().getPort())) {
-
-                        if (!handler.getOpenRGB().getClient().setConnectionOptions(holder.getOrgbIp(), holder.getOrgbPort())) {
-                            instance.getInterface().getNotificationManager().addNotification(
-                                    new Notification(NotificationType.ERROR, "OpenRGB Plugin", "Cannot set server IP and Port while client is connected. Deactivate the output and try again."));
-                        }
-                    }
                 } else { // create new output handler
                     // create new handler
                     OutputHandler handler = instance.createHandler(holder, output);
@@ -157,32 +161,7 @@ public class SetupPanel extends JPanel implements ToolsNavListener {
         panelSettings.add(btnAdd);
     }
 
-    private JPanel createSettingBgr(JComponent... components) {
-        JPanel panel = new JPanel();
-        panel.setLayout(new FlowLayout(FlowLayout.LEFT));
-        panel.setAlignmentX(Component.LEFT_ALIGNMENT);
-        panel.setBackground(Style.panelBackground);
-        panel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 50));
-        for(JComponent comp : components) {
-            panel.add(comp);
-            panel.add(Box.createHorizontalStrut(5));
-        }
-        return panel;
-    }
-
-    private NumberFormatter getIntFieldFormatter() {
-        NumberFormat format = NumberFormat.getInstance();
-        format.setGroupingUsed(false);
-        format.setParseIntegerOnly(true);
-        NumberFormatter formatter = new NumberFormatter(format);
-        formatter.setValueClass(Integer.class);
-        formatter.setMinimum(0);
-        formatter.setAllowsInvalid(true);
-        formatter.setCommitsOnValidEdit(true);
-        return formatter;
-    }
-
-    public boolean validateInput(String name, String outputId, String ip, int port, int deviceId) {
+    public boolean validateInput(String name, String outputId) {
         String errMsg = "Invalid input: ";
         boolean valid = true;
 
@@ -194,17 +173,9 @@ public class SetupPanel extends JPanel implements ToolsNavListener {
             valid = false;
             errMsg += "no VirtualOutput selected, ";
         }
-        if(ip == null || ip.trim().isEmpty()) {
+        if(listDevices.isEmpty()) {
             valid = false;
-            errMsg += "ip field is empty, ";
-        }
-        if(port <= 0) {
-            valid = false;
-            errMsg += "port cannot be negative, ";
-        }
-        if(deviceId < 0) {
-            valid = false;
-            errMsg += "device id must be >= 0";
+            errMsg += "you must add at least one device.";
         }
 
         if(!valid) {
@@ -215,10 +186,59 @@ public class SetupPanel extends JPanel implements ToolsNavListener {
         return valid;
     }
 
+    private void updateDeviceListPanel() {
+        panelDeviceList.removeAll();
+        boolean isConnected = instance.getOpenRGB().isConnected();
+        int controllerCount = isConnected ? instance.getOpenRGB().getControllerCount() : -1;
+
+        for(int deviceId : listDevices) {
+            ListElement el = new ListElement(40);
+            panelDeviceList.add(el);
+
+            JLabel lblDeviceId = new JLabel("Device #" + deviceId);
+            lblDeviceId.setForeground(Style.textColor);
+            el.add(lblDeviceId);
+
+            if(isConnected) {
+                el.add(Box.createHorizontalStrut(5));
+                // show extra information
+                if(deviceId >= controllerCount) {
+                    // invalid device id
+                    JLabel lblError = new JLabel("Invalid device ID. Available devices up to ID " + (controllerCount-1));
+                    lblError.setForeground(Style.error);
+                    el.add(lblError);
+                } else {
+                    de.lars.openrgbwrapper.Device device = instance.getOpenRGB().getControllerData(deviceId);
+                    String text = String.format("%s (%s), %d LEDs",
+                            device.name, device.type.name(), device.leds.length);
+
+                    JLabel lblInfo = new JLabel(text);
+                    lblInfo.setForeground(Style.textColorDarker);
+                    lblInfo.setMaximumSize(new Dimension(800, lblInfo.getPreferredSize().height));
+                    el.add(lblInfo);
+                }
+            }
+
+            // remove device button
+            JButton btnRemove = new JButton("X");
+            UiUtils.configureButton(btnRemove);
+            btnRemove.setToolTipText("Remove device from list");
+            btnRemove.addActionListener(e -> {
+                listDevices.remove((Integer) deviceId);
+                updateDeviceListPanel();
+            });
+            el.add(Box.createHorizontalGlue());
+            el.add(btnRemove);
+        }
+        panelDeviceList.updateUI();
+    }
+
     @Override
     public void onBack() {
         // update devices panel
         devicesPanel.updateDeviceEntryPanels();
+        // update settings panel
+        devicesPanel.setupSettingsPanel();
     }
 
     @Override

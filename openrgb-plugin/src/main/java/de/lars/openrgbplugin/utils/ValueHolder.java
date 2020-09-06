@@ -1,19 +1,21 @@
 package de.lars.openrgbplugin.utils;
 
+import java.util.ArrayList;
+import java.util.List;
+
 public class ValueHolder {
 
     private String name;
     private String outputId;
-    private String orgbIp;
-    private int orgbPort;
-    private int deviceId;
+    private List<Integer> devices;
 
-    public ValueHolder(String name, String outputId, String orgbIp, int orgbPort, int deviceId) {
+    public ValueHolder(String name, String outputId, List<Integer> devices) {
         this.name = name;
         this.outputId = outputId;
-        this.orgbIp = orgbIp;
-        this.orgbPort = orgbPort;
-        this.deviceId = deviceId;
+        if(devices != null)
+            this.devices = devices;
+        else
+            this.devices = new ArrayList<>();
     }
 
     public String getName() {
@@ -32,27 +34,19 @@ public class ValueHolder {
         this.outputId = outputId;
     }
 
-    public String getOrgbIp() {
-        return orgbIp;
+    public List<Integer> getDevices() {
+        return devices;
     }
 
-    public void setOrgbIp(String orgbIp) {
-        this.orgbIp = orgbIp;
+    public void setDevices(List<Integer> devices) {
+        this.devices = devices;
     }
 
-    public int getOrgbPort() {
-        return orgbPort;
+    public void addDevice(int deviceId) {
+        devices.add(deviceId);
     }
 
-    public void setOrgbPort(int orgbPort) {
-        this.orgbPort = orgbPort;
-    }
-
-    public int getDeviceId() {
-        return deviceId;
-    }
-
-    public void setDeviceId(int deviceId) {
-        this.deviceId = deviceId;
+    public void removeDevice(int deviceId) {
+        devices.remove(deviceId);
     }
 }

@@ -4,21 +4,20 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
+import com.google.gson.reflect.TypeToken;
 import de.lars.openrgbplugin.OpenRgbPlugin;
 import de.lars.remotelightcore.settings.SettingsManager;
 import de.lars.remotelightcore.settings.types.SettingObject;
 
-import java.util.HashSet;
-import java.util.Set;
+import java.lang.reflect.Type;
+import java.util.*;
 
 public class StorageUtil {
 
     public static final String SETTING_DATALIST = OpenRgbPlugin.SETTING_PRE + "outputs";
     public static final String KEY_NAME = "name";
     public static final String KEY_OUTPUTID = "output_id";
-    public static final String KEY_ORGB_IP = "openrgb_ip";
-    public static final String KEY_ORGB_PORT = "openrgb_port";
-    public static final String KEY_ORGB_DEVICEID = "openrgb_deviceid";
+    public static final String KEY_ORGB_DEVICES = "openrgb_devices";
 
     /**
      * Load stored values from settings manager and parse data
@@ -26,7 +25,7 @@ public class StorageUtil {
      * @return          a Set containing ValueHolders
      */
     public static Set<ValueHolder> loadData(SettingsManager sm) {
-        Set<ValueHolder> setValues = new HashSet<>();
+        Set<ValueHolder> setValues = new LinkedHashSet<>();
         SettingObject settingJson = sm.getSettingObject(SETTING_DATALIST);
         if(settingJson == null)
             return setValues; // return empty set when no data exists
@@ -46,12 +45,11 @@ public class StorageUtil {
 
             String name = jsonObj.get(KEY_NAME).getAsString();
             String outputId = jsonObj.get(KEY_OUTPUTID).getAsString();
-            String orgbIp = jsonObj.get(KEY_ORGB_IP).getAsString();
-            int port = jsonObj.get(KEY_ORGB_PORT).getAsInt();
-            int deviceId = jsonObj.get(KEY_ORGB_DEVICEID).getAsInt();
+            Type listType = new TypeToken<List<Integer>>() {}.getType();
+            List<Integer> devices = gson.fromJson(jsonObj.get(KEY_ORGB_DEVICES), listType);
 
             // create ValueHolder
-            setValues.add(new ValueHolder(name, outputId, orgbIp, port, deviceId));
+            setValues.add(new ValueHolder(name, outputId, devices));
         }
         return setValues;
     }
@@ -68,9 +66,8 @@ public class StorageUtil {
             // store data in json object
             jsonObj.addProperty(KEY_NAME, holder.getName());
             jsonObj.addProperty(KEY_OUTPUTID, holder.getOutputId());
-            jsonObj.addProperty(KEY_ORGB_IP, holder.getOrgbIp());
-            jsonObj.addProperty(KEY_ORGB_PORT, holder.getOrgbPort());
-            jsonObj.addProperty(KEY_ORGB_DEVICEID, holder.getDeviceId());
+            Type listType = new TypeToken<List<Integer>>() {}.getType();
+            jsonObj.add(KEY_ORGB_DEVICES, gson.toJsonTree(holder.getDevices(), listType));
 
             // add to json root array
             jsonRoot.add(jsonObj);
