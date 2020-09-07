@@ -254,7 +254,6 @@ public class OpenRgbPlugin extends Plugin {
      */
     public OutputHandler getHandlerByVirtualOutput(String outputId) {
         for(OutputHandler handler : setHandler) {
-            System.out.println("Handler output: " + handler.getVirtualOutput().getId() + " output: " + outputId + " equals: " + handler.getVirtualOutput().getId().equals(outputId));
             if(handler.getVirtualOutput().getId().equals(outputId))
                 return handler;
         }

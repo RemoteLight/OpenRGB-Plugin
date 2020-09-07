@@ -106,6 +106,39 @@ public class SetupPanel extends JPanel implements ToolsNavListener {
         });
         panelSettings.add(UserInterfaceUtil.createSettingBgr(lblDeviceId, fieldDeviceId, btnAddDeviceId));
 
+        if(instance.getOpenRGB().isConnected()) {
+            // show info label, remove all and add all button
+            int deviceCount = instance.getOpenRGB().getControllerCount();
+
+            JLabel lblCountInfo = new JLabel("There are " + deviceCount + " devices available.");
+            lblCountInfo.setForeground(Style.textColor);
+
+            JButton btnAddAll = new JButton("Add all");
+            UiUtils.configureButton(btnAddAll);
+            btnAddAll.addActionListener(e -> {
+                for(int i = 0; i < deviceCount; i++) {
+                    if(!listDevices.contains(i))
+                        listDevices.add(i);
+                }
+                updateDeviceListPanel();
+            });
+
+            JButton btnRemoveAll = new JButton("Remove all");
+            UiUtils.configureButton(btnRemoveAll);
+            btnRemoveAll.addActionListener(e -> {
+                listDevices.clear();
+                updateDeviceListPanel();
+            });
+
+            // add components to panel
+            panelSettings.add(UserInterfaceUtil.createSettingBgr(lblCountInfo, btnAddAll, btnRemoveAll));
+        } else {
+            // show hint message
+            JLabel lblHint = new JLabel("(i) Go back and connect the client to receive live data from the SDK server.");
+            lblHint.setForeground(Style.textColorDarker);
+            panelSettings.add(UserInterfaceUtil.createSettingBgr(lblHint));
+        }
+
         panelDeviceList = new JPanel();
         panelDeviceList.setBackground(Style.panelDarkBackground);
         panelDeviceList.setLayout(new BoxLayout(panelDeviceList, BoxLayout.Y_AXIS));
@@ -191,9 +224,11 @@ public class SetupPanel extends JPanel implements ToolsNavListener {
         boolean isConnected = instance.getOpenRGB().isConnected();
         int controllerCount = isConnected ? instance.getOpenRGB().getControllerCount() : -1;
 
-        for(int deviceId : listDevices) {
+        for(int i = 0; i < listDevices.size(); i++) {
+            final int deviceId = listDevices.get(i);
             ListElement el = new ListElement(40);
             panelDeviceList.add(el);
+            panelDeviceList.add(Box.createVerticalStrut(5));
 
             JLabel lblDeviceId = new JLabel("Device #" + deviceId);
             lblDeviceId.setForeground(Style.textColor);
@@ -219,18 +254,65 @@ public class SetupPanel extends JPanel implements ToolsNavListener {
                 }
             }
 
+            el.add(Box.createHorizontalGlue());
+
+            // move device up
+            JButton btnUp = new JButton("\u25B2");
+            configurePanelButton(btnUp);
+            btnUp.setToolTipText("Move up");
+            btnUp.addActionListener(e -> {
+                int index = listDevices.indexOf(deviceId);
+                if(index > 0) {
+                    // move element up in list
+                    listDevices.remove(index);
+                    listDevices.add(index - 1, deviceId);
+                }
+                updateDeviceListPanel();
+            });
+            el.add(btnUp);
+            el.add(Box.createHorizontalStrut(5));
+
+            // move device down
+            JButton btnDown = new JButton("\u25BC");
+            configurePanelButton(btnDown);
+            btnDown.setToolTipText("Move down");
+            btnDown.addActionListener(e -> {
+                int index = listDevices.indexOf(deviceId);
+                if(index < listDevices.size() - 1) {
+                    // move element down in list
+                    listDevices.remove(index);
+                    listDevices.add(index + 1, deviceId);
+                }
+                updateDeviceListPanel();
+            });
+            el.add(btnDown);
+            el.add(Box.createHorizontalStrut(5));
+
+            // check to disable move up/down buttons
+            if(i == 0)
+                btnUp.setEnabled(false);
+            if(i == listDevices.size() - 1)
+                btnDown.setEnabled(false);
+
             // remove device button
-            JButton btnRemove = new JButton("X");
-            UiUtils.configureButton(btnRemove);
+            JButton btnRemove = new JButton("\u2715");
+            configurePanelButton(btnRemove);
             btnRemove.setToolTipText("Remove device from list");
             btnRemove.addActionListener(e -> {
                 listDevices.remove((Integer) deviceId);
                 updateDeviceListPanel();
             });
-            el.add(Box.createHorizontalGlue());
             el.add(btnRemove);
         }
         panelDeviceList.updateUI();
+    }
+
+    private void configurePanelButton(JButton btn) {
+        UiUtils.configureButton(btn);
+        btn.setContentAreaFilled(false);
+        btn.setBorder(null);
+        btn.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        btn.setFont(new Font(Font.DIALOG, Font.PLAIN, 13));
     }
 
     @Override
