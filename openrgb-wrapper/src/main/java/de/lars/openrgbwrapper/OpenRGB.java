@@ -8,6 +8,7 @@ import de.lars.openrgbwrapper.network.protocol.PacketIdentifier;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
+import java.net.SocketException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.charset.StandardCharsets;
@@ -128,7 +129,7 @@ public class OpenRGB {
     public int getControllerCount() {
         sendMessage(PacketIdentifier.REQUEST_CONTROLLER_COUNT, 0);
         byte[] data = readMessage();
-        return data != null ? ByteBuffer.wrap(data).order(ByteOrder.LITTLE_ENDIAN).getInt() : 0;
+        return data != null ? ByteBuffer.wrap(data).order(ByteOrder.LITTLE_ENDIAN).getInt() : -1;
     }
 
     /**
@@ -228,9 +229,7 @@ public class OpenRGB {
             if(dataBuffer != null) out.write(dataBuffer);
             out.flush();
         } catch (IOException e) {
-            System.err.println("Error while sending packet to the server:");
-            e.printStackTrace();
-            System.out.println("Disconnecting client due to exception.");
+            System.err.println("Error while sending packet to the OpenRGB SDK server. Disconnecting client due to exception.");
             try {
                 disconnect();
             } catch (IOException ioException) {
@@ -260,16 +259,24 @@ public class OpenRGB {
         try {
             byte[] header = new byte[HEADER_SIZE];
             // read header
-            if(in.read(header) == -1) return null;
+            if (in.read(header) == -1) return null;
             // decode header
             Packet packet = decodeHeader(header);
             // check if data length is 0
-            if(packet.dataLength <= 0) return null;
+            if (packet.dataLength <= 0) return null;
 
             byte[] data = new byte[packet.dataLength];
             // read data
-            if(in.read(data) == -1) return null;
+            if (in.read(data) == -1) return null;
             return data;
+        } catch(SocketException se) {
+            System.err.println("Error while reading packet from the OpenRGB SDK server. Disconnecting client due to exception.");
+            try {
+                disconnect();
+            } catch (IOException ioException) {
+                System.err.println("Error while disconnecting: ");
+                ioException.printStackTrace();
+            }
         } catch (IOException e) {
             System.err.println("Error while reading from the server:");
             e.printStackTrace();

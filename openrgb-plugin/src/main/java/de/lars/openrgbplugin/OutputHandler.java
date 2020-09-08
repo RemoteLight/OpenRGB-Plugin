@@ -2,6 +2,7 @@ package de.lars.openrgbplugin;
 
 import de.lars.openrgbwrapper.Device;
 import de.lars.openrgbwrapper.models.Color;
+import de.lars.remotelightcore.devices.ConnectionState;
 import de.lars.remotelightcore.devices.virtual.PixelStreamReceiver;
 import de.lars.remotelightcore.devices.virtual.VirtualOutput;
 import de.lars.remotelightcore.devices.virtual.VirtualOutputListener;
@@ -22,6 +23,8 @@ public class OutputHandler implements VirtualOutputListener, PixelStreamReceiver
     private final List<Device> cachedDeviceControllers;
     /** enable or disable pixel output */
     private boolean enabled = false;
+    /** true if client lost connection and awaiting to reconnect */
+    private boolean awaitingReconnect = false;
 
     /**
      * Create a new OutputHandler that forwards received data from a virtual output to
@@ -42,6 +45,11 @@ public class OutputHandler implements VirtualOutputListener, PixelStreamReceiver
     public void attachToOutput() {
         virtualOutput.addListener(this);
         virtualOutput.getOutputStream().addReceiver(this);
+        // check if output is already activated
+        if(virtualOutput.getConnectionState() == ConnectionState.CONNECTED) {
+            // simulate onActivate()
+            onActivate(virtualOutput);
+        }
     }
 
     /**
@@ -65,10 +73,12 @@ public class OutputHandler implements VirtualOutputListener, PixelStreamReceiver
      */
     public void updateOpenRgbDevices() {
         if(plugin.getOpenRGB().getClient().isConnected()) {
-            // clear cached list
-            cachedDeviceControllers.clear();
             // get controller count
             int controllerCount = getOpenRGBDeviceCount();
+            if(controllerCount == -1)
+                return; // error while reading from server
+            // clear cached list
+            cachedDeviceControllers.clear();
             // loop through all device ids
             for(Iterator<Integer> it = devices.iterator(); it.hasNext();) {
                 int deviceId = it.next();
@@ -134,6 +144,11 @@ public class OutputHandler implements VirtualOutputListener, PixelStreamReceiver
 
     @Override
     public void receivedPixelData(java.awt.Color[] colors) {
+        // check if client was reconnected
+        if(awaitingReconnect && plugin.getOpenRGB().isConnected()) {
+            enabled = true;
+            awaitingReconnect = false;
+        }
         // check if output is enabled
         if(!enabled) return;
         // check if client is still connected
@@ -141,6 +156,12 @@ public class OutputHandler implements VirtualOutputListener, PixelStreamReceiver
             OpenRgbPlugin.getInstance().getInterface().getNotificationManager().addNotification(
                 new Notification(NotificationType.ERROR, "OpenRGB Plugin (" + name + ")", "Lost connection to OpenRGB SDK server."));
             enabled = false;
+            awaitingReconnect = true;
+
+            // trigger auto connect timer
+            if(plugin.isAutoConnectEnabled()) {
+                plugin.setAutoConnectEnabled(true);
+            }
             return;
         }
         // check if there are still output devices
@@ -182,8 +203,10 @@ public class OutputHandler implements VirtualOutputListener, PixelStreamReceiver
     @Override
     public void onActivate(VirtualOutput virtualOutput) {
         // connect orgb client
-        if(!plugin.connectOpenRGB())
+        if(!plugin.connectOpenRGB()) {
+            awaitingReconnect = true;
             return;
+        }
         // check for valid device id and update cached devices
         updateOpenRgbDevices();
         if(cachedDeviceControllers.isEmpty()) {
@@ -251,4 +274,5 @@ public class OutputHandler implements VirtualOutputListener, PixelStreamReceiver
     public boolean isEnabled() {
         return enabled;
     }
+
 }

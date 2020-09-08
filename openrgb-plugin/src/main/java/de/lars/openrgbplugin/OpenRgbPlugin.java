@@ -1,5 +1,6 @@
 package de.lars.openrgbplugin;
 
+import de.lars.openrgbplugin.utils.ClientConnectEvent;
 import de.lars.openrgbplugin.utils.StorageUtil;
 import de.lars.openrgbplugin.utils.ValueHolder;
 import de.lars.openrgbwrapper.OpenRGB;
@@ -21,6 +22,9 @@ import java.util.Set;
 
 public class OpenRgbPlugin extends Plugin {
 
+    //-----------------------------------
+    // SETTING KEYS
+    //-----------------------------------
     public static final String PREFIX = "[OpenRGB] ";
     /** setting key prefix */
     public static final String SETTING_PRE = "openrgb.";
@@ -28,17 +32,34 @@ public class OpenRgbPlugin extends Plugin {
     public static final String SETTING_IP = SETTING_PRE + "openrgb_ip";
     /** setting key port */
     public static final String SETTING_PORT = SETTING_PRE + "openrgb_port";
+    /** setting auto connect */
+    public static final String SETTING_AUTOCONNECT = SETTING_PRE + "auto_connect";
+    /** setting auto connect interval */
+    public static final String SETTING_AUTOCONNECT_INTERVAL = SETTING_AUTOCONNECT + "_interval";
 
+    //-----------------------------------
+    // HANDLERS, CLIENT & AUTO_CONNECT
+    //-----------------------------------
     /** a set of output handlers for each device group */
     private Set<OutputHandler> setHandler;
     /** OpenRGB client instance used to communicate with OpenRGB */
     private OpenRGB openRGB;
+    /** auto connect timer */
+    private AutoConnect autoConnectTimer;
 
+    //-----------------------------------
+    // SETTINGS VALUES
+    //-----------------------------------
     /** OpenRGB server ip */
     private String openRgbIP;
     /** OpenRGB server port */
     private int openRgbPort;
+    /** auto connect enable state */
+    private boolean autoConnect;
+    /** auto connect interval in SECONDS */
+    private int autoConnectInterval;
 
+    //------------ INSTANCE ------------
     private static OpenRgbPlugin instance;
 
     public static OpenRgbPlugin getInstance() {
@@ -55,6 +76,15 @@ public class OpenRgbPlugin extends Plugin {
         openRGB = new OpenRGB(openRgbIP, openRgbPort, "RemoteLight OpenRGB-Plugin");
         // change default timeout to 3s
         openRGB.getClient().setConnectionTimeout(3000);
+        // load output groups
+        loadOutputGroups();
+
+        // initialize auto connect timer
+        autoConnectTimer = new AutoConnect(autoConnectInterval*1000, openRGB);
+        // start timer (if feature is enabled)
+        if(autoConnect) {
+            autoConnectTimer.start();
+        }
 
         // create entry panel
         OpenRgbEntryPanel entry = new OpenRgbEntryPanel();
@@ -75,15 +105,22 @@ public class OpenRgbPlugin extends Plugin {
     }
 
     /**
-     * Load saved output handlers from data file
+     * Load saved data from settings manager or register defaults
      */
     protected void loadSettings() {
         SettingsManager sm = getInterface().getSettingsManager();
-        DeviceManager dm = getInterface().getDeviceManager();
 
         // load ip and port
         this.openRgbIP = (String) sm.addSetting(new SettingObject(SETTING_IP, "OpenRGB Server IP", "127.0.0.1"), false).getValue();
         this.openRgbPort = (int) sm.addSetting(new SettingObject(SETTING_PORT, "OpenRGB Server Port", 6742), false).getValue();
+        // load auto connect
+        this.autoConnect = (boolean) sm.addSetting(new SettingObject(SETTING_AUTOCONNECT, "AutoConnect Feature", false), false).getValue();
+        this.autoConnectInterval = (int) sm.addSetting(new SettingObject(SETTING_AUTOCONNECT_INTERVAL, "AutoConnect interval", 30), false).getValue();
+    }
+
+    protected void loadOutputGroups() {
+        SettingsManager sm = getInterface().getSettingsManager();
+        DeviceManager dm = getInterface().getDeviceManager();
 
         // load value holders from settings
         Set<ValueHolder> setValues = StorageUtil.loadData(sm);
@@ -104,12 +141,18 @@ public class OpenRgbPlugin extends Plugin {
         print("Loaded " + setHandler.size() + " OpenRGB output groups.");
     }
 
+    /**
+     * Store all data in settings manager
+     */
     protected void storeSettings() {
         SettingsManager sm = getInterface().getSettingsManager();
 
         // save ip and port
         sm.getSettingObject(SETTING_IP).setValue(openRgbIP);
         sm.getSettingObject(SETTING_PORT).setValue(openRgbPort);
+        // save auto connect
+        sm.getSettingObject(SETTING_AUTOCONNECT).setValue(autoConnect);
+        sm.getSettingObject(SETTING_AUTOCONNECT_INTERVAL).setValue(autoConnectInterval);
 
         Set<ValueHolder> setValues = new HashSet<>();
 
@@ -169,11 +212,15 @@ public class OpenRgbPlugin extends Plugin {
         } catch (IOException e) {
             String ip = openRGB.getClient().getHostname();
             int port = openRGB.getClient().getPort();
-            OpenRgbPlugin.print(String.format("Error while connecting to OpenRGB server %s:%d. Error: %S", ip, port, e.getMessage()));
+            // print some error messages
+            OpenRgbPlugin.print(String.format("Error while connecting to OpenRGB server %s:%d. Error: %s", ip, port, e.getMessage()));
             OpenRgbPlugin.getInstance().getInterface().getNotificationManager().addNotification(
                     new Notification(NotificationType.ERROR, "OpenRGB Plugin",
                             String.format("Could not connect to %s:%d. Please check OpenRGB plugin configuration and try again", ip, port)));
             return false;
+        } finally {
+            // call connect event
+            getInterface().getEventHandler().call(new ClientConnectEvent(ClientConnectEvent.Type.CONNECT));
         }
     }
 
@@ -185,6 +232,9 @@ public class OpenRgbPlugin extends Plugin {
             openRGB.disconnect();
         } catch (IOException e) {
             OpenRgbPlugin.print("Error while disconnecting OpenRGB client: " + e.getMessage());
+        } finally {
+            // call disconnect event
+            getInterface().getEventHandler().call(new ClientConnectEvent(ClientConnectEvent.Type.DISCONNECT));
         }
     }
 
@@ -218,6 +268,7 @@ public class OpenRgbPlugin extends Plugin {
      * @param handler   the handler to remove
      */
     public void removeHandler(OutputHandler handler) {
+        handler.detachFromOutput();
         setHandler.remove(handler);
     }
 
@@ -260,6 +311,10 @@ public class OpenRgbPlugin extends Plugin {
         return null;
     }
 
+    /**
+     * Get a list of all currently enabled output handlers.
+     * @return              a list containing enabled handlers
+     */
     public List<OutputHandler> getEnabledHandler() {
         List<OutputHandler> listEnabled = new ArrayList<>();
         for(OutputHandler handler : setHandler) {
@@ -271,8 +326,8 @@ public class OpenRgbPlugin extends Plugin {
 
     /**
      * Find virtual output by the specified id
-     * @param id    id of the virtual output
-     * @return      the virtual output or null
+     * @param id            id of the virtual output
+     * @return              the virtual output or null
      */
     public static VirtualOutput getVirtualOutput(DeviceManager dm, String id) {
         // find output by id
@@ -284,12 +339,51 @@ public class OpenRgbPlugin extends Plugin {
     }
 
     /**
+     * Enable or disable auto connect feature and start/stop timer.
+     * @param enable        whether auto connect should enabled or disabled
+     */
+    public void setAutoConnectEnabled(boolean enable) {
+        autoConnect = enable;
+        // stop/start timer (has no effect if already started/stopped)
+        if(!enable)
+            autoConnectTimer.stop();
+        else
+            autoConnectTimer.start();
+    }
+
+    /**
+     * Check if auto connect feature is enabled or disabled
+     * @return              true if enabled, false otherwise
+     */
+    public boolean isAutoConnectEnabled() {
+        return autoConnect;
+    }
+
+    /**
+     * Set auto connect timer interval in SECONDS
+     * @param autoConnectInterval   interval in seconds
+     */
+    public void setAutoConnectInterval(int autoConnectInterval) {
+        this.autoConnectInterval = autoConnectInterval;
+        // connect interval to milliseconds first
+        autoConnectTimer.setInterval(autoConnectInterval * 1000);
+    }
+
+    /**
+     * Get current auto connect interval in seconds
+     * @return              interval in seconds
+     */
+    public int getAutoConnectInterval() {
+        return autoConnectInterval;
+    }
+
+    /**
      * Compare ip address and port
-     * @param ip1   ip #1
-     * @param port1 port #1
-     * @param ip2   ip #2
-     * @param port2 port #2
-     * @return      true if the address and port is equal
+     * @param ip1           ip #1
+     * @param port1         port #1
+     * @param ip2           ip #2
+     * @param port2         port #2
+     * @return              true if the address and port is equal
      */
     public static boolean compareConnectionInfo(String ip1, int port1, String ip2, int port2) {
         return ip1.equalsIgnoreCase(ip2) && port1 == port2;

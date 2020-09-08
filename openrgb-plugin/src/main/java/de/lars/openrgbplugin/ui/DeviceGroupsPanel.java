@@ -2,6 +2,7 @@ package de.lars.openrgbplugin.ui;
 
 import de.lars.openrgbplugin.OpenRgbPlugin;
 import de.lars.openrgbplugin.OutputHandler;
+import de.lars.openrgbplugin.utils.ClientConnectEvent;
 import de.lars.openrgbplugin.utils.UserInterfaceUtil;
 import de.lars.remotelightclient.ui.Style;
 import de.lars.remotelightclient.ui.components.ListElement;
@@ -14,6 +15,7 @@ import javax.swing.*;
 import javax.swing.border.CompoundBorder;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
+import javax.swing.text.NumberFormatter;
 import java.awt.*;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
@@ -58,6 +60,9 @@ public class DeviceGroupsPanel extends JPanel {
 
         setupSettingsPanel();
         updateDeviceEntryPanels();
+
+        // register event listener and update settings panel on connection
+        instance.getInterface().getEventHandler().register(ClientConnectEvent.class, connectEvent -> setupSettingsPanel());
     }
 
     public void setupSettingsPanel() {
@@ -87,13 +92,27 @@ public class DeviceGroupsPanel extends JPanel {
                 OpenRgbPlugin.getInstance().disconnectOpenRGB();
             else
                 OpenRgbPlugin.getInstance().connectOpenRGB();
-            // reload settings panel
-            setupSettingsPanel();
         });
 
         JLabel lblConnectionState = new JLabel("Client not connected");
         lblConnectionState.setForeground(Style.textColor);
         panelSettings.add(UserInterfaceUtil.createSettingBgr(panelSettings.getBackground(), btnToggleClient, lblConnectionState));
+
+        JCheckBox checkAutoConnect = new JCheckBox("Auto Connect");
+        checkAutoConnect.setBackground(panelSettings.getBackground());
+        checkAutoConnect.setForeground(Style.textColor);
+        checkAutoConnect.setSelected(instance.isAutoConnectEnabled());
+        checkAutoConnect.addActionListener(e -> instance.setAutoConnectEnabled(checkAutoConnect.isSelected()));
+
+        JLabel lblInterval = new JLabel("Interval (sec):");
+        lblInterval.setForeground(Style.textColor);
+
+        NumberFormatter intervalFormatter = UserInterfaceUtil.getIntFieldFormatter();
+        intervalFormatter.setMinimum(1);
+        JFormattedTextField fieldInterval = new JFormattedTextField(intervalFormatter);
+        fieldInterval.setColumns(10);
+        fieldInterval.setValue(instance.getAutoConnectInterval());
+        panelSettings.add(UserInterfaceUtil.createSettingBgr(panelSettings.getBackground(), checkAutoConnect, lblInterval, fieldInterval));
 
         if(isConnected) {
             // disable if OpenRGB client is connected
@@ -125,6 +144,8 @@ public class DeviceGroupsPanel extends JPanel {
             }
         });
         fieldServerPort.addPropertyChangeListener("value", e -> instance.setOpenRgbConnection(fieldServerIp.getText(), (Integer) fieldServerPort.getValue()));
+        fieldInterval.addPropertyChangeListener("value", e -> instance.setAutoConnectInterval((Integer) fieldInterval.getValue()));
+
         panelSettings.updateUI();
     }
 

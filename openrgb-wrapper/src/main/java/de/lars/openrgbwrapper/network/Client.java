@@ -73,10 +73,8 @@ public class Client {
      * @throws IOException  if an error occurs while connecting
      */
     public synchronized boolean connect() throws IOException {
-        // return if client is already connected
-        if(isConnected()) return false;
-        // set connected state to true, to prevent new socket creation while old socket tries to connect
-        connected = true;
+        // return if client is already connected or socket is tries to connect
+        if(socket != null) return false;
         // create new socket
         socket = new Socket();
 
@@ -84,17 +82,20 @@ public class Client {
             InetSocketAddress address = new InetSocketAddress(hostname, port);
             // connect to address
             socket.connect(address, timeout);
+            connected = true;
             // initialize output and input streams
             outStream = new DataOutputStream(socket.getOutputStream());
             inStream = new DataInputStream(socket.getInputStream());
             return true;
         } catch (IOException e) {
             connected = false;
-            if(socket.isConnected())
+            try {
                 socket.close();
-            socket = null;
-            outStream = null;
-            inStream = null;
+            } finally {
+                socket = null;
+                outStream = null;
+                inStream = null;
+            }
             throw new IOException("Could not connect to server.", e);
         }
     }
@@ -109,10 +110,15 @@ public class Client {
         // return if client is not connected
         if(!isConnected() || socket == null) return false;
         connected = false;
-        socket.close();
-        socket = null;
-        outStream = null;
-        inStream = null;
+        try {
+            socket.close();
+        } catch (IOException e) {
+            throw e;
+        } finally {
+            socket = null;
+            outStream = null;
+            inStream = null;
+        }
         return true;
     }
 
