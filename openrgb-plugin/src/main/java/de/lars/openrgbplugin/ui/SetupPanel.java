@@ -258,7 +258,6 @@ public class SetupPanel extends JPanel implements ToolsNavListener {
 
             // move device up
             JButton btnUp = new JButton("\u25B2");
-            configurePanelButton(btnUp);
             btnUp.setToolTipText("Move up");
             btnUp.addActionListener(e -> {
                 int index = listDevices.indexOf(deviceId);
@@ -274,7 +273,6 @@ public class SetupPanel extends JPanel implements ToolsNavListener {
 
             // move device down
             JButton btnDown = new JButton("\u25BC");
-            configurePanelButton(btnDown);
             btnDown.setToolTipText("Move down");
             btnDown.addActionListener(e -> {
                 int index = listDevices.indexOf(deviceId);
@@ -293,6 +291,9 @@ public class SetupPanel extends JPanel implements ToolsNavListener {
                 btnUp.setEnabled(false);
             if(i == listDevices.size() - 1)
                 btnDown.setEnabled(false);
+            // configure buttons (needs to be after setEnable() for different text colors)
+            configurePanelButton(btnUp);
+            configurePanelButton(btnDown);
 
             // remove device button
             JButton btnRemove = new JButton("\u2715");
@@ -308,9 +309,11 @@ public class SetupPanel extends JPanel implements ToolsNavListener {
     }
 
     private void configurePanelButton(JButton btn) {
-        UiUtils.configureButton(btn);
         btn.setContentAreaFilled(false);
+        btn.setFocusPainted(false);
+        btn.setBorderPainted(false);
         btn.setBorder(null);
+        btn.setForeground(btn.isEnabled() ? Style.textColor : Style.textColorDarker);
         btn.setCursor(new Cursor(Cursor.HAND_CURSOR));
         btn.setFont(new Font(Font.DIALOG, Font.PLAIN, 13));
     }
