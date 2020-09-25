@@ -11,7 +11,6 @@ import de.lars.remotelightcore.notification.NotificationType;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Iterator;
 import java.util.List;
 
 public class OutputHandler implements VirtualOutputListener, PixelStreamReceiver {
@@ -80,20 +79,18 @@ public class OutputHandler implements VirtualOutputListener, PixelStreamReceiver
             // clear cached list
             cachedDeviceControllers.clear();
             // loop through all device ids
-            for(Iterator<Integer> it = devices.iterator(); it.hasNext();) {
-                int deviceId = it.next();
+            for (int deviceId : devices) {
                 // check if device is valid
-                if(deviceId < controllerCount) {
+                if (deviceId < controllerCount) {
                     // add to cache list
                     cachedDeviceControllers.add(plugin.getOpenRGB().getControllerData(deviceId));
                 } else {
                     // print error message and remove device id from list
                     OpenRgbPlugin.print(String.format("(%s) Found invalid device ID: %d There are only %d OpenRGB devices (max device ID: %d). Removing device from list.",
-                            getName(), deviceId, controllerCount, controllerCount-1));
+                            getName(), deviceId, controllerCount, controllerCount - 1));
                     OpenRgbPlugin.getInstance().getInterface().getNotificationManager().addNotification(
-                            new Notification(NotificationType.WARN,"OpenRGB Plugin (" + getName() + ")",
-                                    String.format("Invalid device ID: %d. Max device ID is %d. Removing device from list.", deviceId, controllerCount-1)));
-                    it.remove();
+                            new Notification(NotificationType.WARN, "OpenRGB Plugin (" + getName() + ")",
+                                    String.format("Invalid device ID: %d. Max device ID is %d. Ignoring device.", deviceId, controllerCount - 1)));
                 }
             }
         }
