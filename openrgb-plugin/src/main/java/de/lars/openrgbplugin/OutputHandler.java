@@ -84,8 +84,8 @@ public class OutputHandler implements VirtualOutputListener, PixelStreamReceiver
                 if (deviceId < controllerCount) {
                     // add to cache list
                     cachedDeviceControllers.add(plugin.getOpenRGB().getControllerData(deviceId));
-                } else {
-                    // print error message and remove device id from list
+                } else if(!enabled) { // prevent spamming the error message; show only on activation
+                    // print error message and ignore device id
                     OpenRgbPlugin.print(String.format("(%s) Found invalid device ID: %d There are only %d OpenRGB devices (max device ID: %d). Removing device from list.",
                             getName(), deviceId, controllerCount, controllerCount - 1));
                     OpenRgbPlugin.getInstance().getInterface().getNotificationManager().addNotification(
