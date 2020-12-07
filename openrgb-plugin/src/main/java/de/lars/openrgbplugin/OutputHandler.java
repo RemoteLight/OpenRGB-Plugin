@@ -140,7 +140,7 @@ public class OutputHandler implements VirtualOutputListener, PixelStreamReceiver
     }
 
     @Override
-    public void receivedPixelData(java.awt.Color[] colors) {
+    public void receivedPixelData(de.lars.remotelightcore.utils.color.Color[] colors) {
         // check if client was reconnected
         if(awaitingReconnect && plugin.getOpenRGB().isConnected()) {
             enabled = true;
@@ -189,11 +189,11 @@ public class OutputHandler implements VirtualOutputListener, PixelStreamReceiver
     }
 
     /**
-     * Convert {@link java.awt.Color} Array to {@link de.lars.openrgbwrapper.models.Color} Array.
+     * Convert {@link de.lars.remotelightcore.utils.color.Color} Array to {@link de.lars.openrgbwrapper.models.Color} Array.
      * @param awtColors     AWT Color array
      * @return              OpenRGB color model
      */
-    protected Color[] convertColors(java.awt.Color[] awtColors) {
+    protected Color[] convertColors(de.lars.remotelightcore.utils.color.Color[] awtColors) {
         return Arrays.stream(awtColors).map(c -> new Color(c.getRed(), c.getGreen(), c.getBlue())).toArray(Color[]::new);
     }
 
