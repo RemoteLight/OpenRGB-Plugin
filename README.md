@@ -8,7 +8,7 @@ Add [OpenRGB](https://gitlab.com/CalcProgrammer1/OpenRGB) support to [RemoteLigh
 - acts like a normal RemoteLight output
 
 ## Usage
-1. [Download RemoteLight](https://github.com/Drumber/RemoteLight/releases) (minimum version v0.2.4-rc2)
+1. [Download RemoteLight](https://github.com/Drumber/RemoteLight/releases) (minimum version v0.2.5-beta, available for download from the [GitLab-CI pipeline](https://gitlab.com/Drumber/RemoteLight/-/pipelines)).
 2. [Download OpenRGB-Plugin](https://github.com/RemoteLight/OpenRGB-Plugin/releases) and place it in the plugins folder `%userprofile%/.RemoteLight/plugins`
 3. [Download OpenRGB](https://gitlab.com/CalcProgrammer1/OpenRGB) and [set it up](https://gitlab.com/CalcProgrammer1/OpenRGB/-/wikis/OpenRGB-Windows-Setup-and-Usage)
 4. Create a virtual output in RemoteLight  
