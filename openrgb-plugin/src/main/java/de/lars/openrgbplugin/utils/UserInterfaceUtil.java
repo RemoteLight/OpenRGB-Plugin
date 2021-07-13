@@ -1,6 +1,6 @@
 package de.lars.openrgbplugin.utils;
 
-import de.lars.remotelightclient.ui.Style;
+import de.lars.remotelightplugincompat.StyleCompat;
 
 import javax.swing.*;
 import javax.swing.text.NumberFormatter;
@@ -23,7 +23,7 @@ public class UserInterfaceUtil {
     }
 
     public static JPanel createSettingBgr(JComponent... components) {
-        return createSettingBgr(Style.panelBackground, components);
+        return createSettingBgr(StyleCompat.panelBackground(), components);
     }
 
     public static NumberFormatter getIntFieldFormatter() {

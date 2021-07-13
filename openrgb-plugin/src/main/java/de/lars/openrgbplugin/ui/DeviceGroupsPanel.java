@@ -9,7 +9,8 @@ import de.lars.remotelightclient.ui.components.ListElement;
 import de.lars.remotelightclient.ui.panels.tools.ToolsPanel;
 import de.lars.remotelightclient.ui.panels.tools.ToolsPanelNavItem;
 import de.lars.remotelightclient.utils.ui.MenuIconFont;
-import de.lars.remotelightclient.utils.ui.UiUtils;
+import de.lars.remotelightplugincompat.StyleCompat;
+import de.lars.remotelightplugincompat.UiUtilsCompat;
 
 import javax.swing.*;
 import javax.swing.border.CompoundBorder;
@@ -30,17 +31,17 @@ public class DeviceGroupsPanel extends JPanel {
     public DeviceGroupsPanel(ToolsPanel context, OpenRgbPlugin instance) {
         this.context = context;
         this.instance = instance;
-        setBackground(Style.panelBackground);
+        setBackground(StyleCompat.panelBackground());
         setLayout(new BorderLayout());
         setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
 
         panelSettings = new JPanel();
-        panelSettings.setBackground(Style.panelDarkBackground);
+        panelSettings.setBackground(StyleCompat.panelDarkBackground());
         panelSettings.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5));
         panelSettings.setLayout(new BoxLayout(panelSettings, BoxLayout.Y_AXIS));
 
         panelDeviceList = new JPanel();
-        panelDeviceList.setBackground(Style.panelDarkBackground);
+        panelDeviceList.setBackground(StyleCompat.panelDarkBackground());
         panelDeviceList.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5));
         panelDeviceList.setLayout(new BoxLayout(panelDeviceList, BoxLayout.Y_AXIS));
 
@@ -68,9 +69,9 @@ public class DeviceGroupsPanel extends JPanel {
     public void setupSettingsPanel() {
         panelSettings.removeAll();
         JLabel lblServerIp = new JLabel("OpenRGB Server IP:");
-        lblServerIp.setForeground(Style.textColor);
+        lblServerIp.setForeground(StyleCompat.textColor());
         JLabel lblServerPort = new JLabel("OpenRGB Port:");
-        lblServerPort.setForeground(Style.textColor);
+        lblServerPort.setForeground(StyleCompat.textColor());
 
         JTextField fieldServerIp = new JTextField();
         fieldServerIp.setColumns(20);
@@ -86,7 +87,7 @@ public class DeviceGroupsPanel extends JPanel {
 
         boolean isConnected = instance.getOpenRGB().isConnected();
         JButton btnToggleClient = new JButton(isConnected ? "Disconnect" : "Connect");
-        UiUtils.configureButton(btnToggleClient);
+        UiUtilsCompat.configureButton(btnToggleClient);
         btnToggleClient.addActionListener(e -> {
             if(OpenRgbPlugin.getInstance().getOpenRGB().isConnected())
                 OpenRgbPlugin.getInstance().disconnectOpenRGB();
@@ -95,17 +96,17 @@ public class DeviceGroupsPanel extends JPanel {
         });
 
         JLabel lblConnectionState = new JLabel("Client not connected");
-        lblConnectionState.setForeground(Style.textColor);
+        lblConnectionState.setForeground(StyleCompat.textColor());
         panelSettings.add(UserInterfaceUtil.createSettingBgr(panelSettings.getBackground(), btnToggleClient, lblConnectionState));
 
         JCheckBox checkAutoConnect = new JCheckBox("Auto Connect");
         checkAutoConnect.setBackground(panelSettings.getBackground());
-        checkAutoConnect.setForeground(Style.textColor);
+        checkAutoConnect.setForeground(StyleCompat.textColor());
         checkAutoConnect.setSelected(instance.isAutoConnectEnabled());
         checkAutoConnect.addActionListener(e -> instance.setAutoConnectEnabled(checkAutoConnect.isSelected()));
 
         JLabel lblInterval = new JLabel("Interval (sec):");
-        lblInterval.setForeground(Style.textColor);
+        lblInterval.setForeground(StyleCompat.textColor());
 
         NumberFormatter intervalFormatter = UserInterfaceUtil.getIntFieldFormatter();
         intervalFormatter.setMinimum(1);
@@ -162,11 +163,11 @@ public class DeviceGroupsPanel extends JPanel {
 
             boolean activeDevice = instance.getEnabledHandler().contains(handler);
             if(activeDevice) {
-                el.setBorder(new CompoundBorder(BorderFactory.createLineBorder(Style.accent), el.getBorder()));
+                el.setBorder(new CompoundBorder(BorderFactory.createLineBorder(StyleCompat.accent()), el.getBorder()));
             }
 
             JLabel lblName = new JLabel(handler.getName());
-            lblName.setForeground(Style.textColor);
+            lblName.setForeground(StyleCompat.textColor());
             el.add(lblName);
             el.add(Box.createHorizontalStrut(10));
 
@@ -174,7 +175,7 @@ public class DeviceGroupsPanel extends JPanel {
                 JLabel lblConnection = new JLabel(String.format("Enabled and attached to %s (%d LEDs)",
                         handler.getVirtualOutput().getId(),
                         handler.getTotalPixelNumber()));
-                lblConnection.setForeground(Style.textColorDarker);
+                lblConnection.setForeground(StyleCompat.textColorDarker());
                 el.add(lblConnection);
             }
             el.add(Box.createHorizontalGlue());
@@ -199,7 +200,7 @@ public class DeviceGroupsPanel extends JPanel {
         elAdd.add(Box.createHorizontalStrut(5));
 
         JLabel lblAdd = new JLabel("Add OpenRGB Device Group");
-        lblAdd.setForeground(Style.textColor);
+        lblAdd.setForeground(StyleCompat.textColor());
         elAdd.add(lblAdd);
 
         elAdd.addMouseListener(new MouseAdapter() {
@@ -239,7 +240,7 @@ public class DeviceGroupsPanel extends JPanel {
         btn.setFocusable(true);
         btn.setOpaque(true);
         btn.setBackground(null);
-        btn.setForeground(Style.textColor);
+        btn.setForeground(StyleCompat.textColor());
         btn.setCursor(new Cursor(Cursor.HAND_CURSOR));
     }
 

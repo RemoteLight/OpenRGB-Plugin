@@ -7,7 +7,7 @@
     <parent>
         <artifactId>OpenRGB-Plugin</artifactId>
         <groupId>de.lars</groupId>
-        <version>1.3.2</version>
+        <version>1.4</version>
     </parent>
 
     <artifactId>openrgb-plugin</artifactId>
@@ -19,7 +19,7 @@
         <dependency>
             <groupId>com.github.Drumber</groupId>
             <artifactId>RemoteLight</artifactId>
-            <version>f25326a231</version>
+            <version>9ff8723287</version>
         </dependency>
         <dependency>
             <groupId>de.lars</groupId>
@@ -49,7 +49,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-shade-plugin</artifactId>
-                <version>3.2.2</version>
+                <version>3.2.4</version>
                 <executions>
                     <execution>
                         <phase>package</phase>
@@ -60,6 +60,7 @@
                             <minimizeJar>true</minimizeJar>
                             <artifactSet>
                                 <includes>
+                                    <include>com.github.Drumber.RemoteLight:remotelight-plugincompat</include>
                                     <include>de.lars:openrgb-wrapper</include>
                                     <include>org.jetbrains.kotlin:kotlin-stdlib</include>
                                 </includes>

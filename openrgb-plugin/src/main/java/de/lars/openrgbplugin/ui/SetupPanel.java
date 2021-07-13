@@ -4,15 +4,15 @@ import de.lars.openrgbplugin.OpenRgbPlugin;
 import de.lars.openrgbplugin.OutputHandler;
 import de.lars.openrgbplugin.utils.UserInterfaceUtil;
 import de.lars.openrgbplugin.utils.ValueHolder;
-import de.lars.remotelightclient.ui.Style;
 import de.lars.remotelightclient.ui.components.ListElement;
 import de.lars.remotelightclient.ui.panels.tools.ToolsNavListener;
 import de.lars.remotelightclient.ui.panels.tools.ToolsPanel;
-import de.lars.remotelightclient.utils.ui.UiUtils;
 import de.lars.remotelightcore.devices.Device;
 import de.lars.remotelightcore.devices.virtual.VirtualOutput;
 import de.lars.remotelightcore.notification.Notification;
 import de.lars.remotelightcore.notification.NotificationType;
+import de.lars.remotelightplugincompat.StyleCompat;
+import de.lars.remotelightplugincompat.UiUtilsCompat;
 
 import javax.swing.*;
 import java.awt.*;
@@ -40,11 +40,11 @@ public class SetupPanel extends JPanel implements ToolsNavListener {
         else
             listDevices = new ArrayList<>();
 
-        setBackground(Style.panelBackground);
+        setBackground(StyleCompat.panelBackground());
         setLayout(new BorderLayout());
 
         panelSettings = new JPanel();
-        panelSettings.setBackground(Style.panelDarkBackground);
+        panelSettings.setBackground(StyleCompat.panelDarkBackground());
         panelSettings.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5));
         panelSettings.setLayout(new BoxLayout(panelSettings, BoxLayout.Y_AXIS));
 
@@ -64,13 +64,13 @@ public class SetupPanel extends JPanel implements ToolsNavListener {
      */
     private void initSettingsPanel() {
         JLabel lblName = new JLabel("Name:");
-        lblName.setForeground(Style.textColor);
+        lblName.setForeground(StyleCompat.textColor());
 
         JTextField fieldName = new JTextField(20);
         panelSettings.add(UserInterfaceUtil.createSettingBgr(lblName, fieldName));
 
         JLabel lblVirtOutput = new JLabel("VirtualOutput:");
-        lblVirtOutput.setForeground(Style.textColor);
+        lblVirtOutput.setForeground(StyleCompat.textColor());
 
         JComboBox<String> comboVirtOutputs = new JComboBox<>();
         for(Device device : instance.getInterface().getDeviceManager().getDevices()) {
@@ -86,12 +86,12 @@ public class SetupPanel extends JPanel implements ToolsNavListener {
         panelSettings.add(UserInterfaceUtil.createSettingBgr(lblVirtOutput, comboVirtOutputs));
 
         JLabel lblDeviceId = new JLabel("OpenRGB Device ID (index):");
-        lblDeviceId.setForeground(Style.textColor);
+        lblDeviceId.setForeground(StyleCompat.textColor());
 
         JFormattedTextField fieldDeviceId = new JFormattedTextField(UserInterfaceUtil.getIntFieldFormatter());
         fieldDeviceId.setColumns(5);
         JButton btnAddDeviceId = new JButton("Add device");
-        UiUtils.configureButton(btnAddDeviceId);
+        UiUtilsCompat.configureButton(btnAddDeviceId);
         btnAddDeviceId.addActionListener(e -> {
             if(fieldDeviceId.getValue() == null) return;
             int value = (int) fieldDeviceId.getValue();
@@ -111,10 +111,10 @@ public class SetupPanel extends JPanel implements ToolsNavListener {
             int deviceCount = instance.getOpenRGB().getControllerCount();
 
             JLabel lblCountInfo = new JLabel("There are " + deviceCount + " devices available.");
-            lblCountInfo.setForeground(Style.textColor);
+            lblCountInfo.setForeground(StyleCompat.textColor());
 
             JButton btnAddAll = new JButton("Add all");
-            UiUtils.configureButton(btnAddAll);
+            UiUtilsCompat.configureButton(btnAddAll);
             btnAddAll.addActionListener(e -> {
                 for(int i = 0; i < deviceCount; i++) {
                     if(!listDevices.contains(i))
@@ -124,7 +124,7 @@ public class SetupPanel extends JPanel implements ToolsNavListener {
             });
 
             JButton btnRemoveAll = new JButton("Remove all");
-            UiUtils.configureButton(btnRemoveAll);
+            UiUtilsCompat.configureButton(btnRemoveAll);
             btnRemoveAll.addActionListener(e -> {
                 listDevices.clear();
                 updateDeviceListPanel();
@@ -135,12 +135,12 @@ public class SetupPanel extends JPanel implements ToolsNavListener {
         } else {
             // show hint message
             JLabel lblHint = new JLabel("(i) Go back and connect the client to receive live data from the SDK server.");
-            lblHint.setForeground(Style.textColorDarker);
+            lblHint.setForeground(StyleCompat.textColorDarker());
             panelSettings.add(UserInterfaceUtil.createSettingBgr(lblHint));
         }
 
         panelDeviceList = new JPanel();
-        panelDeviceList.setBackground(Style.panelDarkBackground);
+        panelDeviceList.setBackground(StyleCompat.panelDarkBackground());
         panelDeviceList.setLayout(new BoxLayout(panelDeviceList, BoxLayout.Y_AXIS));
         panelDeviceList.setAlignmentX(Component.LEFT_ALIGNMENT);
         panelSettings.add(Box.createVerticalStrut(10));
@@ -153,7 +153,7 @@ public class SetupPanel extends JPanel implements ToolsNavListener {
         }
 
         JButton btnAdd = new JButton(handler == null ? "Add OpenRGB Device" : "Save OpenRGB Device");
-        UiUtils.configureButton(btnAdd);
+        UiUtilsCompat.configureButton(btnAdd);
         btnAdd.setAlignmentX(Component.LEFT_ALIGNMENT);
         btnAdd.setMaximumSize(new Dimension(Integer.MAX_VALUE, 50));
         btnAdd.setMinimumSize(new Dimension(100, 50));
@@ -231,7 +231,7 @@ public class SetupPanel extends JPanel implements ToolsNavListener {
             panelDeviceList.add(Box.createVerticalStrut(5));
 
             JLabel lblDeviceId = new JLabel("Device #" + deviceId);
-            lblDeviceId.setForeground(Style.textColor);
+            lblDeviceId.setForeground(StyleCompat.textColor());
             el.add(lblDeviceId);
 
             if(isConnected) {
@@ -240,7 +240,7 @@ public class SetupPanel extends JPanel implements ToolsNavListener {
                 if(deviceId >= controllerCount) {
                     // invalid device id
                     JLabel lblError = new JLabel("Invalid device ID. Available devices up to ID " + (controllerCount-1));
-                    lblError.setForeground(Style.error);
+                    lblError.setForeground(StyleCompat.error());
                     el.add(lblError);
                 } else {
                     de.lars.openrgbwrapper.Device device = instance.getOpenRGB().getControllerData(deviceId);
@@ -248,7 +248,7 @@ public class SetupPanel extends JPanel implements ToolsNavListener {
                             device.name, device.type.name(), device.leds.length);
 
                     JLabel lblInfo = new JLabel(text);
-                    lblInfo.setForeground(Style.textColorDarker);
+                    lblInfo.setForeground(StyleCompat.textColorDarker());
                     lblInfo.setMaximumSize(new Dimension(800, lblInfo.getPreferredSize().height));
                     el.add(lblInfo);
                 }
@@ -313,7 +313,7 @@ public class SetupPanel extends JPanel implements ToolsNavListener {
         btn.setFocusPainted(false);
         btn.setBorderPainted(false);
         btn.setBorder(null);
-        btn.setForeground(btn.isEnabled() ? Style.textColor : Style.textColorDarker);
+        btn.setForeground(btn.isEnabled() ? StyleCompat.textColor() : StyleCompat.textColorDarker());
         btn.setCursor(new Cursor(Cursor.HAND_CURSOR));
         btn.setFont(new Font(Font.DIALOG, Font.PLAIN, 13));
     }
